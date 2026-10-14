@@ -1,0 +1,39 @@
+\section{Introdução}
+\label{sec:introducao}
+
+A computação de borda aproxima o processamento dos dispositivos que geram os dados, reduzindo latência, consumo de banda e dependência da nuvem \citep{shi2016edge}. Nesse cenário, o Aprendizado Federado (\textit{Federated Learning}, FL) tornou-se a forma mais difundida de treinar modelos de aprendizado de máquina sobre dados distribuídos em celulares, sensores IoT e servidores de borda: cada cliente treina localmente e envia apenas os parâmetros do modelo a um servidor agregador, de modo que os dados brutos nunca deixam o dispositivo \citep{mcmahan2017fedavg, lim2020mobileedge}.
+
+A premissa que sustenta a eficácia do algoritmo de referência, o \textit{Federated Averaging} (FedAvg), é que as atualizações locais apontam, em média, na mesma direção que o gradiente global. Em implantações reais essa premissa raramente se mantém. Cada dispositivo observa uma fatia enviesada da população --- uma câmera vê sempre o mesmo cruzamento, um paciente gera os próprios sinais, um usuário digita o próprio vocabulário --- e os dados passam a ser não independentes e não identicamente distribuídos (não-IID) \citep{kairouz2021advances, zhao2018noniid}.
+
+\subsection{Definição do problema}
+
+Sob dados não-IID, os modelos locais divergem durante as épocas de treinamento local (\textit{client drift}), e a média desses modelos deixa de aproximar o ótimo global. As consequências são queda de acurácia, oscilação da curva de convergência e aumento do número de rodadas de comunicação \citep{zhao2018noniid, li2020challenges}. Em ambientes de borda, rodadas extras significam mais tráfego de rede e mais energia gasta por dispositivos com bateria e processamento limitados.
+
+O FedProx \citep{li2020fedprox} é uma das propostas mais citadas para mitigar esse efeito: acrescenta à função objetivo local um termo proximal $\frac{\mu}{2}\lVert w - w^{t}\rVert^2$ que penaliza o afastamento do modelo global. A ideia é simples e o algoritmo é amplamente disponível em frameworks, mas um levantamento bibliográfico preliminar, realizado para este trabalho, mostra que a evidência empírica sobre ele é contraditória. Há estudos em que o FedProx supera o FedAvg \citep{mahmood2025alzheimer, julekha2026bangla}, estudos em que ocorre o oposto \citep{vajjhula2025har}, resultados mistos, em que cada algoritmo vence em uma métrica \citep{tan2026instruction}, e benchmarks que concluem que nenhum algoritmo vence em todos os cenários \citep{li2022niidbench, onlu2025aggregation}. Além disso, poucos trabalhos medem o custo computacional adicional que o termo proximal impõe ao cliente, justamente o recurso mais escasso na borda.
+
+O problema investigado é, portanto: \textit{não se sabe, de forma sistemática, em quais tipos e níveis de heterogeneidade de dados o FedProx oferece ganho real sobre o FedAvg, nem se esse ganho compensa o custo computacional local que ele introduz.}
+
+\subsection{Objetivos}
+
+\subsubsection{Objetivo geral}
+
+Avaliar experimentalmente o desempenho do FedProx em relação ao FedAvg em ambientes federados simulados com diferentes tipos e níveis de heterogeneidade de dados, quantificando acurácia, estabilidade de convergência e custo computacional local, para identificar em quais condições o FedProx compensa.
+
+\subsubsection{Objetivos específicos}
+
+\begin{enumerate}[label=\textbf{OE\arabic*.}, leftmargin=*, itemsep=1pt]
+    \item Mapear, por meio de levantamento bibliográfico sistemático, os estudos comparativos entre algoritmos de agregação sob dados não-IID publicados entre 2021 e 2026.
+    \item Configurar um ambiente de simulação federada reprodutível com Flower e PyTorch, capaz de executar FedAvg, FedProx e algoritmos de referência sob as mesmas condições iniciais.
+    \item Gerar partições não-IID controladas sobre CIFAR-10 e Fashion-MNIST: Dirichlet com diferentes valores de $\alpha$, partição patológica por classes e desbalanceamento de quantidade.
+    \item Executar uma bateria de experimentos variando o nível de heterogeneidade e o hiperparâmetro $\mu$, com múltiplas sementes pareadas.
+    \item Medir acurácia, perda, rodadas até a acurácia-alvo, dispersão entre clientes e tempo de computação local, inclusive em uma CPU restrita que emula um dispositivo de borda.
+    \item Analisar estatisticamente os resultados e sintetizá-los em um mapa de trade-off com recomendações de uso.
+\end{enumerate}
+
+\subsection{Contribuição esperada}
+
+Trata-se de uma pesquisa experimental, e a contribuição esperada é produzir evidência controlada e reprodutível sobre uma questão em que a literatura diverge. Concretamente, espera-se entregar: (i) um mapa de trade-off $\alpha \times \mu \times$ (acurácia, custo) que indica o limiar de heterogeneidade a partir do qual o FedProx passa a compensar, lacuna apontada pelo levantamento; (ii) a medição isolada do custo computacional do termo proximal em hardware restrito, raramente reportada; (iii) a comparação entre tipos de heterogeneidade, e não só entre níveis; e (iv) código, scripts e dados de execução abertos, que permitem reproduzir e estender os experimentos.
+
+\subsection{Metodologia}
+
+O trabalho segue a modalidade de Pesquisa Experimental e se desenvolverá em quatro etapas. Primeiro, um levantamento bibliográfico sistemático, já realizado, no IEEE Xplore, no Google Scholar e no OpenAlex (este cobrindo ACM, SpringerLink e ScienceDirect), guiado por critérios de inclusão e exclusão explícitos, resultou em 22 estudos comparativos que fundamentam as hipóteses. Em seguida, será construído um ambiente de simulação com o framework Flower \citep{beutel2020flower} e PyTorch \citep{paszke2019pytorch}, executado em GPUs gratuitas na nuvem. Na terceira etapa, um projeto fatorial cruzará algoritmo, nível e tipo de heterogeneidade e valor de $\mu$, com sementes pareadas: cinco na fase exploratória e dez novas na fase confirmatória. Por fim, os resultados serão analisados com estatística descritiva, com o teste de Wilcoxon pareado \citep{wilcoxon1945} e com um teste de equivalência \citep{schuirmann1987tost}, e o custo computacional será medido à parte em um micro-experimento em CPU de um único núcleo.

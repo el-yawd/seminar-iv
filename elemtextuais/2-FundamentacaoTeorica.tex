@@ -1,0 +1,60 @@
+\section{Fundamentação Teórica}
+\label{sec:fundamentacao}
+
+Esta seção reúne os conceitos necessários para entender por que dados não-IID prejudicam o treinamento federado, como FedAvg e FedProx diferem e quais ferramentas foram usadas para estudá-los.
+
+\subsection{Conceitos fundamentais}
+
+\paragraph{Aprendizado Federado na borda.}
+No FL, $K$ clientes, cada um com um conjunto local $\mathcal{D}_k$ de $n_k$ amostras, colaboram para minimizar
+\begin{equation}
+    \min_{w} F(w) = \sum_{k=1}^{K} \frac{n_k}{n} F_k(w), \quad F_k(w) = \frac{1}{n_k}\sum_{(x,y)\in\mathcal{D}_k} \ell(w; x, y),
+    \label{eq:objetivo}
+\end{equation}
+em que $n=\sum_k n_k$ e $\ell$ é a função de perda. O treinamento ocorre em rodadas: o servidor seleciona uma fração $C$ dos clientes, envia o modelo global $w^t$, cada cliente executa algumas épocas de otimização local e devolve o modelo atualizado, que o servidor agrega \citep{mcmahan2017fedavg}. Na borda, os clientes são dispositivos com processamento, memória, energia e conectividade limitados e variáveis \citep{lim2020mobileedge}, o que torna caro cada passo de treinamento e cada rodada de comunicação.
+
+\paragraph{FedAvg.}
+O \textit{Federated Averaging} \citep{mcmahan2017fedavg} executa $E$ épocas de SGD local a partir de $w^t$ e agrega os modelos por média ponderada pelo número de amostras:
+\begin{equation}
+    w^{t+1} = \sum_{k \in S_t} \frac{n_k}{\sum_{j\in S_t} n_j}\, w_k^{t+1}.
+    \label{eq:fedavg}
+\end{equation}
+Executar várias épocas locais reduz o número de rodadas quando os dados são IID, porque cada $F_k$ aproxima bem $F$. Quando não são, o ótimo de $F_k$ se afasta do ótimo de $F$, e quanto mais o cliente treina, mais seu modelo deriva nessa direção. Esse fenômeno, chamado \textit{client drift}, faz com que a média da Equação~\eqref{eq:fedavg} oscile e convirja para um ponto pior \citep{zhao2018noniid, karimireddy2020scaffold}.
+
+\paragraph{Heterogeneidade estatística (dados não-IID).}
+\citet{kairouz2021advances} e \citet{li2022niidbench} distinguem tipos de desvio entre as distribuições locais $P_k(x,y)$:
+\begin{itemize}[leftmargin=*, itemsep=1pt]
+    \item \textbf{Desvio de rótulos} (\textit{label skew}): $P_k(y)$ varia entre clientes. É o tipo mais estudado e o que mais degrada a acurácia.
+    \item \textbf{Desvio de atributos} (\textit{feature skew}): $P_k(x)$ varia, como em fotos tiradas por câmeras diferentes ou na escrita de pessoas diferentes.
+    \item \textbf{Desvio de quantidade} (\textit{quantity skew}): $n_k$ varia muito entre clientes.
+\end{itemize}
+Em experimentos, o desvio de rótulos é produzido de duas formas. A \textbf{partição de Dirichlet} foi popularizada por \citet{hsu2019fedavgm}, que sorteiam, para cada cliente, as proporções de classes. Este trabalho usa a variante por classe adotada pelo NIID-Bench \citep{li2022niidbench} e pelo Flower Datasets: para cada classe $c$ amostra-se um vetor $p_c \sim \mathrm{Dir}_K(\alpha)$ e destina-se a fração $p_{c,k}$ das amostras de $c$ ao cliente $k$. Valores pequenos de $\alpha$ (por exemplo, $0{,}05$) concentram cada classe em poucos clientes, enquanto $\alpha \to \infty$ recupera a distribuição IID. Na \textbf{partição patológica} \citep{mcmahan2017fedavg}, cada cliente recebe amostras de apenas $k$ classes. O parâmetro $\alpha$ permite variar a heterogeneidade de forma contínua e é a principal variável independente deste trabalho.
+
+\paragraph{FedProx.}
+O FedProx \citep{li2020fedprox} altera apenas o problema resolvido no cliente. Em vez de minimizar $F_k(w)$, o cliente minimiza
+\begin{equation}
+    h_k(w; w^t) = F_k(w) + \frac{\mu}{2}\lVert w - w^t \rVert^2 ,
+    \label{eq:fedprox}
+\end{equation}
+cujo gradiente é $\nabla F_k(w) + \mu (w - w^t)$. O termo proximal funciona como uma mola que puxa o modelo local de volta ao global, limitando o \textit{drift}. Com $\mu = 0$ o algoritmo coincide com o FedAvg, e com $\mu$ muito grande o cliente quase não sai de $w^t$ e o aprendizado fica lento. A agregação é a mesma da Equação~\eqref{eq:fedavg}, e o volume transmitido por rodada é idêntico ao do FedAvg. O custo extra é local: manter uma cópia de $w^t$ na memória e calcular o termo e seu gradiente a cada passo, uma operação $O(d)$ no número $d$ de parâmetros. O FedProx também tolera que clientes lentos executem menos trabalho local (soluções $\gamma$-inexatas), o que o torna relevante quando há heterogeneidade de sistema.
+
+\paragraph{Algoritmos de referência.}
+Três algoritmos completam a comparação, cada um atacando a heterogeneidade por um caminho diferente:
+\begin{itemize}[leftmargin=*, itemsep=1pt]
+    \item \textbf{SCAFFOLD} \citep{karimireddy2020scaffold} usa variáveis de controle $c$ (global) e $c_k$ (local) para corrigir a direção do gradiente local ($\nabla F_k - c_k + c$). Elimina o \textit{drift} em teoria, mas dobra o volume de comunicação.
+    \item \textbf{FedAvgM} \citep{hsu2019fedavgm} aplica momento no servidor sobre a atualização agregada, suavizando a oscilação entre rodadas sem custo adicional para o cliente.
+    \item \textbf{FedAdam} \citep{reddi2021adaptive} trata a atualização agregada como um pseudo-gradiente e aplica o otimizador Adam no servidor.
+\end{itemize}
+FedAvgM e FedAdam deslocam a correção para o servidor, que na borda é o nó com mais recursos. Por isso são contrapontos naturais ao FedProx, que coloca o custo no cliente.
+
+\subsection{Tecnologias envolvidas}
+
+\paragraph{Flower.} Framework de código aberto para FL \citep{beutel2020flower}, agnóstico ao framework de aprendizado. Oferece estratégias prontas (\texttt{FedAvg}, \texttt{FedProx}, \texttt{FedAvgM}, \texttt{FedAdam}), um motor de simulação que executa centenas de clientes virtuais em uma única máquina e a mesma API para implantação em dispositivos reais. Foi escolhido porque permite migrar os experimentos da simulação para hardware de borda (por exemplo, Raspberry Pi) sem reescrever o código.
+
+\paragraph{Flower Datasets.} Biblioteca \texttt{flwr-datasets}, que baixa conjuntos de dados públicos e implementa particionadores reprodutíveis: Dirichlet, patológico e por tamanho. Ela garante que todos os algoritmos recebam exatamente a mesma partição para uma dada semente.
+
+\paragraph{PyTorch.} Biblioteca de aprendizado profundo \citep{paszke2019pytorch} usada para definir os modelos, o laço de treinamento local e o termo proximal.
+
+\paragraph{Ray.} Motor de execução distribuída \citep{moritz2018ray} usado internamente pelo simulador do Flower para alocar clientes virtuais em CPUs e GPUs.
+
+\paragraph{Infraestrutura em nuvem gratuita.} Notebooks do Kaggle e do Google Colab fornecem GPUs (NVIDIA T4/P100) sem custo, com cotas semanais. São suficientes para modelos convolucionais pequenos e viabilizam o projeto fatorial sem orçamento.

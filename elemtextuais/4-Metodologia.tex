@@ -1,0 +1,185 @@
+\section{Metodologia}
+\label{sec:metodologia}
+
+Este trabalho é uma Pesquisa Experimental (PE). Esta seção descreve o planejamento: o que se mede, sob quais hipóteses, em que ambiente, com quais dados e métricas e com qual desenho de experimentos.
+
+\subsection{Problema investigado}
+
+Do ponto de vista experimental, o problema se resume a medir o efeito de duas variáveis, o \emph{algoritmo de agregação} e a \emph{heterogeneidade dos dados}, sobre a qualidade do modelo global e o custo imposto aos clientes. A heterogeneidade tem duas dimensões: o \emph{tipo} (desvio de rótulos ou de quantidade) e o \emph{nível} (controlado pelo $\alpha$ da partição de Dirichlet). A comparação central é FedProx × FedAvg, que é o caso particular $\mu = 0$ do FedProx. Os demais algoritmos (SCAFFOLD, FedAvgM, FedAdam) servem de referência para situar a magnitude dos efeitos.
+
+Duas questões de pesquisa guiam o trabalho:
+
+\begin{description}[leftmargin=0pt, itemsep=2pt]
+    \item[QP1.] Em quais níveis e tipos de heterogeneidade o FedProx supera, empata ou perde para o FedAvg em acurácia global e estabilidade de convergência?
+    \item[QP2.] Qual é o custo computacional local adicional do termo proximal, e ele é compensado pela redução no número de rodadas até a acurácia-alvo, em função de $\mu$?
+\end{description}
+
+Ficam fora do escopo os ataques e as defesas de privacidade (privacidade diferencial, clientes maliciosos), o desvio de atributos e a personalização de modelos por cliente.
+
+\subsection{Hipóteses}
+
+As hipóteses derivam das lacunas e das contradições identificadas na Seção~\ref{sec:trabalhos}. Quando a hipótese afirma uma diferença, a hipótese nula ($H_0$) é a de ausência de diferença. Quando afirma ausência de diferença, ela é testada como \emph{equivalência}: $H_0$ é a de que a diferença excede uma margem $\delta$ fixada antes dos experimentos, pois a simples não rejeição de um teste de diferença não é evidência de igualdade.
+
+\begin{description}[leftmargin=0pt, itemsep=2pt]
+    \item[H1 (nível).] A vantagem de acurácia do FedProx sobre o FedAvg cresce à medida que $\alpha$ diminui. Para $\alpha \geq 1$, as acurácias são equivalentes, com diferença dentro de $\pm\delta$, $\delta = 1$ ponto percentual.
+    \item[H2 ($\mu$).] O efeito do FedProx depende de $\mu$. Valores intermediários ($0{,}01 \leq \mu \leq 0{,}1$) dão o maior ganho, e $\mu = 1$ prejudica a acurácia em partições próximas do IID, porque restringe demais o aprendizado local.
+    \item[H3 (tipo).] O efeito do FedProx depende do tipo de heterogeneidade. Sob a partição patológica, que concentra o desvio nos rótulos, o FedProx supera o FedAvg. Sob desvio só de quantidade, com rótulos IID, o FedProx é equivalente ao FedAvg (diferença dentro de $\pm\delta$).
+    \item[H4 (custo).] O tempo de computação local por época do FedProx é maior que o do FedAvg, mas a diferença é pequena diante do custo da retropropagação. Sob heterogeneidade severa, a redução de rodadas até a acurácia-alvo torna o custo total do cliente menor com o FedProx.
+\end{description}
+
+\subsection{Ambiente experimental}
+
+Os experimentos rodam em dois ambientes, cada um com uma finalidade (Tabela~\ref{tab:ambiente}). As simulações federadas, que demandam muitas execuções, rodam em notebooks gratuitos com GPU. A medição de custo computacional (H4) roda separadamente em CPU limitada a um único núcleo. Isso tem dois motivos: na GPU, vários clientes virtuais competem pelo mesmo dispositivo e o tempo medido fica ruidoso; além disso, um núcleo de CPU representa melhor um dispositivo de borda do que uma GPU de datacenter.
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Ambientes de execução.}
+    \label{tab:ambiente}
+    \begin{tabular}{@{}p{1.9cm}p{5.9cm}@{}}
+        \toprule
+        Item & Especificação \\
+        \midrule
+        \multicolumn{2}{@{}l}{\textit{Simulação federada (QP1, H1--H3)}} \\
+        Plataforma & Kaggle Notebooks (Google Colab como alternativa) \\
+        GPU & NVIDIA Tesla T4 (16 GB) ou P100, conforme disponibilidade; cota de cerca de 30 h/semana \\
+        \midrule
+        \multicolumn{2}{@{}l}{\textit{Micro-experimento de custo (QP2, H4)}} \\
+        CPU & Intel Core i5-1235U, limitada a 1 thread (\texttt{torch.set\_num\_threads(1)}) \\
+        Memória & 12 GB \\
+        SO & Linux (CachyOS), ambiente Python isolado \\
+        Extensão & Raspberry Pi 4, se disponível \\
+        \midrule
+        \multicolumn{2}{@{}l}{\textit{Software}} \\
+        Linguagem & Python 3.11 \\
+        Bibliotecas & \texttt{flwr[simulation]}, \texttt{flwr-datasets}, \texttt{torch}, \texttt{torchvision}, \texttt{pandas}, \texttt{scipy}, \texttt{matplotlib}; versões fixadas em \texttt{requirements.txt} \pendente{preencher versões} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Simuladores, frameworks ou plataformas}
+
+O \textbf{Flower} \citep{beutel2020flower} foi escolhido por três motivos. Primeiro, implementa nativamente FedAvg, FedProx, FedAvgM e FedAdam, o que reduz o risco de erro de implementação e facilita a comparação com outros trabalhos que usam o mesmo framework. Segundo, seu motor de simulação, apoiado no Ray \citep{moritz2018ray}, executa 100 clientes virtuais em uma única GPU, alocando uma fração do dispositivo a cada cliente ativo. Terceiro, o mesmo código de cliente pode ser implantado em dispositivos reais, o que abre caminho para validar os resultados fora da simulação \citep{valli2026beyond}. O SCAFFOLD não faz parte das estratégias nativas e vem da coleção de \textit{baselines} do Flower. O \textbf{Flower Datasets} gera as partições, e o \textbf{PyTorch} \citep{paszke2019pytorch} implementa modelos e treinamento local.
+
+Simuladores de rede como iFogSim e EdgeCloudSim não foram usados. Eles modelam latência e alocação de tarefas, mas não executam o treinamento dos modelos, e a variável de interesse aqui é a dinâmica de otimização.
+
+\subsection{Datasets}
+
+Foram escolhidos dois datasets públicos de classificação de imagens, ambos com dez classes balanceadas, o que permite controlar exatamente o desvio de rótulos introduzido pela partição (Tabela~\ref{tab:datasets}). Ambos estão entre os mais usados nos estudos do levantamento, o que facilita comparar os resultados.
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Datasets utilizados.}
+    \label{tab:datasets}
+    \begin{tabular}{@{}lcc@{}}
+        \toprule
+        & Fashion-MNIST & CIFAR-10 \\
+        \midrule
+        Referência & \citet{xiao2017fashion} & \citet{krizhevsky2009cifar} \\
+        Imagens & $28\times28$, cinza & $32\times32$, RGB \\
+        Classes & 10 & 10 \\
+        Treino / teste & \num{60000} / \num{10000} & \num{50000} / \num{10000} \\
+        Papel & depuração, rápido & padrão da área \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+O Fashion-MNIST é rápido de treinar e serve para depurar o \textit{pipeline} e para executar a grade completa a baixo custo. O CIFAR-10 é mais difícil e mais sensível à heterogeneidade, e é o dataset usado pelo NIID-Bench \citep{li2022niidbench} e por \citet{enang2026optimiser}. O FEMNIST \citep{caldas2018leaf}, previsto na proposta inicial, tem heterogeneidade natural por escritor (desvio de atributos). Ficou como extensão porque esse tipo de desvio está fora do escopo das hipóteses.
+
+\textbf{Pré-processamento.} Os pixels são normalizados pela média e pelo desvio padrão de cada canal do conjunto de treino. Não se usa aumento de dados, para que as diferenças observadas venham apenas da agregação. O conjunto de treino é particionado entre os 100 clientes, e cada partição local é dividida em 80\% para treino e 20\% para teste local, usado na métrica de dispersão entre clientes. O conjunto de teste oficial fica no servidor e é usado na avaliação global.
+
+\subsection{Métricas de avaliação}
+
+A Tabela~\ref{tab:metricas} define as métricas e indica a hipótese que cada uma ajuda a responder.
+
+\begin{table*}[t]
+    \centering\small
+    \caption{Métricas de avaliação.}
+    \label{tab:metricas}
+    \begin{tabular}{@{}p{3.6cm}p{9.6cm}p{2.2cm}@{}}
+        \toprule
+        Métrica & Definição & Hipóteses \\
+        \midrule
+        Acurácia global final & Média da acurácia do modelo global no teste centralizado nas últimas 5 rodadas. Usar a média, e não o último ponto, reduz o efeito de oscilações. & H1, H2, H3 \\
+        Perda de teste & Entropia cruzada no teste centralizado, ao longo das rodadas (curva de convergência). & H1, H2 \\
+        Instabilidade & Desvio padrão da acurácia global nas últimas 20 rodadas. Mede a oscilação causada pelo \textit{client drift}. & H1, H2 \\
+        Rodadas até a acurácia-alvo ($R_\tau$) & Primeira rodada em que a acurácia global atinge $\tau$, definido como 90\% da acurácia final do FedAvg com $\alpha = 100$ (quase IID) no mesmo dataset. Execuções que não atingem $\tau$ são tratadas como censuradas (ver Configuração dos experimentos). & H1, H4 \\
+        Dispersão entre clientes & Desvio padrão e percentil 10 da acurácia do modelo global final nos testes locais dos 100 clientes. Indica se o ganho médio esconde clientes mal atendidos. & H1, H3 \\
+        Tempo local por época ($t_e$) & Tempo de parede de uma época de treinamento local, medido com \texttt{time.perf\_counter()} (com \texttt{torch.cuda.synchronize()} na GPU). & H4 \\
+        Custo total até o alvo & $C_\tau = C \cdot R_\tau \cdot E \cdot \bar{t}_e$: tempo esperado de computação local acumulado por um cliente até o modelo atingir $\tau$, já que cada cliente participa, em média, de uma fração $C$ das rodadas. & H4 \\
+        Memória de pico & Uso máximo de memória residente do processo cliente (\texttt{ru\_maxrss}). & H4 \\
+        Bytes por rodada & Tamanho dos parâmetros enviados e recebidos. É uma variável de controle: deve ser igual entre FedAvg e FedProx e o dobro no SCAFFOLD. & controle \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+\subsection{Configuração dos experimentos}
+
+\paragraph{Variáveis.} As variáveis independentes são o algoritmo (com $\mu$ no caso do FedProx), o tipo de partição e o nível de heterogeneidade $\alpha$. As variáveis dependentes são as métricas da Tabela~\ref{tab:metricas}. Os demais fatores são mantidos fixos (Tabela~\ref{tab:fixos}, na Seção~\ref{sec:desenvolvimento}): número de clientes, fração por rodada, rodadas, épocas locais, otimizador e modelo.
+
+\paragraph{Projeto fatorial.} A Tabela~\ref{tab:fatores} mostra os níveis de cada fator. Para caber no orçamento de GPU gratuita, o projeto é dividido em blocos. A grade principal (bloco A) cruza todos os níveis do FedProx com todos os valores de $\alpha$. Os algoritmos de referência (bloco B) usam menos sementes. Os outros tipos de heterogeneidade (bloco C) usam apenas o melhor $\mu$, com as mesmas dez sementes novas do bloco D, que confirma o resultado principal.
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Fatores e níveis.}
+    \label{tab:fatores}
+    \begin{tabular}{@{}p{2.3cm}p{5.5cm}@{}}
+        \toprule
+        Fator & Níveis \\
+        \midrule
+        Algoritmo & FedAvg; FedProx; FedAvgM; FedAdam; SCAFFOLD \\
+        $\mu$ (FedProx) & 0,01; 0,1; 1 \\
+        Partição & Dirichlet de rótulos; patológica ($k = 2$ classes por cliente); quantidade (tamanhos com distribuição exponencial, rótulos IID) \\
+        $\alpha$ (Dirichlet) & 0,05; 0,1; 0,5; 1; 100 \\
+        Dataset & Fashion-MNIST; CIFAR-10 \\
+        Sementes & 5 (exploratório) + 10 (confirmatório) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Blocos de execução e orçamento estimado (por dataset).}
+    \label{tab:blocos}
+    \begin{tabular}{@{}lp{5.6cm}r@{}}
+        \toprule
+        Bloco & Composição & Execuções \\
+        \midrule
+        A & (FedAvg + 3 $\mu$) $\times$ 5 $\alpha$ $\times$ 5 sementes & 100 \\
+        B & (FedAvgM, FedAdam, SCAFFOLD) $\times$ 5 $\alpha$ $\times$ 3 sementes & 45 \\
+        C & (FedAvg, FedProx $\mu^*$) $\times$ 2 partições $\times$ 10 sementes novas & 40 \\
+        D & (FedAvg, FedProx $\mu^*$) $\times$ 5 $\alpha$ $\times$ 10 sementes novas & 100 \\
+        \midrule
+        Total & & 285 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Somando os dois datasets, são 570 execuções. O custo de cada uma depende do dataset: estima-se cerca de 1 minuto para Fashion-MNIST e 3 minutos para CIFAR-10 em uma T4, o que dá aproximadamente 19 horas de GPU. Isso cabe em uma semana de cota gratuita (cerca de 30 horas), e a folga cobre o piloto, reexecuções e uma eventual ampliação de $T$. Uma execução-piloto confirma essa estimativa antes da grade completa (Seção~\ref{sec:fluxo}).
+
+\paragraph{Pareamento.} Em cada semente $s$, todos os algoritmos compartilham a mesma partição dos dados, a mesma inicialização do modelo global e a mesma sequência de clientes sorteados em cada rodada. Assim, a diferença entre duas execuções com a mesma semente se deve apenas ao algoritmo, e a variância da comparação cai bastante. Para que o pareamento seja exato também na GPU, as execuções usam algoritmos determinísticos (\texttt{torch.use\_deterministic\_algorithms(True)}, \texttt{cudnn.benchmark = False} e \texttt{CUBLAS\_WORKSPACE\_CONFIG} definido). Com isso, o FedProx com $\mu = 0$ deve reproduzir o FedAvg exatamente, e esse teste valida a implementação.
+
+\paragraph{Escolha de $\mu^*$ e análise confirmatória.} O valor $\mu^*$ usado nos blocos C e D é o que maximiza a acurácia média no bloco A, para cada dataset. Como $\mu^*$ é escolhido com as sementes 0 a 4, testá-lo nessas mesmas sementes superestimaria o ganho. Por isso, os blocos C e D usam dez sementes novas (5 a 14). Há ainda um motivo estatístico: com apenas cinco pares, o menor p-valor bilateral possível no teste de Wilcoxon exato é 0,0625, e o teste nunca rejeitaria $H_0$ a 5\%. Pelo mesmo motivo, o bloco A (cinco sementes) é tratado como exploratório, e H2 é avaliada de forma descritiva.
+
+\paragraph{Análise estatística.} Para cada combinação (dataset, $\alpha$), calcula-se a diferença pareada $\Delta_s = \text{acc}_{\text{FedProx}}(s) - \text{acc}_{\text{FedAvg}}(s)$. Reportam-se a média de $\Delta$ com intervalo de confiança de 95\% (\textit{bootstrap}) e o teste de postos sinalizados de Wilcoxon bilateral \citep{wilcoxon1945} sobre as dez sementes confirmatórias dos blocos C e D. A correção de Holm-Bonferroni é aplicada sobre os cinco valores de $\alpha$. A equivalência é testada pelo procedimento TOST \citep{schuirmann1987tost}: dois testes de Wilcoxon unilaterais, um contra $\Delta \leq -\delta$ e outro contra $\Delta \geq \delta$, ambos a 5\%; o TOST é equivalente a verificar se o intervalo de confiança de 90\% de $\Delta$ está contido em $(-\delta, \delta)$. H1 é aceita se $\Delta$ for significativamente positivo para $\alpha \leq 0{,}1$ e equivalente a zero para $\alpha \geq 1$.
+
+\paragraph{Execuções censuradas.} Uma execução que não atinge $\tau$ em $T$ rodadas não tem $R_\tau$ definido. Em vez de atribuir $R_\tau = T$, o que subestima o custo, a análise de H4 reporta a fração de execuções que atinge $\tau$ em cada configuração e compara $R_\tau$ e $C_\tau$ somente entre pares de sementes em que ambos os algoritmos atingem o alvo. Se o piloto indicar que menos da metade das execuções com $\alpha \leq 0{,}1$ atinge $\tau$, $T$ será ampliado para 200 rodadas nesses níveis. Para H4, o tempo por época de cada algoritmo é medido em 30 repetições independentes e comparado com o teste de Mann-Whitney, reportando-se a razão entre as medianas.
+
+A Tabela~\ref{tab:hipoteses} resume como cada hipótese será avaliada: quais execuções são comparadas, com qual teste e sob qual critério ela é aceita.
+
+\begin{table*}[t]
+    \centering\small
+    \caption{Plano de teste das hipóteses.}
+    \label{tab:hipoteses}
+    \begin{tabular}{@{}p{1.1cm}p{4.6cm}p{3.6cm}p{6.2cm}@{}}
+        \toprule
+        Hip. & Comparação & Teste & Critério de aceitação \\
+        \midrule
+        H1 & FedProx ($\mu^*$) × FedAvg, para cada $\alpha$ (bloco D) & Wilcoxon pareado bilateral, $n = 10$, Holm sobre 5 $\alpha$; TOST com $\delta = 1$ p.p. & $\Delta > 0$ significativo para $\alpha \leq 0{,}1$ e equivalência para $\alpha \geq 1$ \\
+        H2 & Três valores de $\mu$, para cada $\alpha$ (bloco A, exploratório) & Descritivo: posto médio dos $\mu$; médias com IC 95\% (\textit{bootstrap}) & Melhor $\mu$ em $\{0{,}01; 0{,}1\}$ e IC de $\Delta$ abaixo de zero para $\mu = 1$ quando $\alpha = 100$ \\
+        H3 & FedProx ($\mu^*$) × FedAvg na patológica e na de quantidade (bloco C), comparado ao Dirichlet (bloco D) & Wilcoxon pareado, $n = 10$; TOST com $\delta = 1$ p.p. & $\Delta > 0$ significativo na patológica e equivalência sob desvio de quantidade \\
+        H4 & $t_e$ de FedProx × FedAvg em CPU de 1 thread; $C_\tau$ por $\alpha$ & Mann-Whitney ($n = 30$); razão das medianas & $t_e^{\text{Prox}} > t_e^{\text{Avg}}$ com razão $< 1{,}10$ e $C_\tau^{\text{Prox}} < C_\tau^{\text{Avg}}$ para $\alpha \leq 0{,}1$ (pares não censurados) \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+\paragraph{Ameaças à validade.} \textit{Validade interna}: os hiperparâmetros do cliente (taxa de aprendizado, épocas) foram fixados uma única vez e não otimizados por algoritmo, o que pode favorecer algum deles. A mitigação é usar valores padrão da literatura e iguais para todos. \textit{Validade externa}: a simulação não reproduz latência, falhas nem a heterogeneidade de hardware de uma implantação real, e os resultados podem divergir fora dela \citep{valli2026beyond}. O micro-experimento em CPU restrita reduz, sem eliminar, essa limitação. \textit{Validade de construção}: modelos pequenos e partições sintéticas podem não representar redes profundas e heterogeneidade natural. Por isso, as conclusões se restringem a esse regime.

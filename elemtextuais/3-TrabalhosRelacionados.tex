@@ -1,0 +1,92 @@
+\section{Trabalhos Relacionados}
+\label{sec:trabalhos}
+
+Os trabalhos discutidos nesta seção vêm de um levantamento bibliográfico sistemático, descrito a seguir. Depois de apresentar o processo, os estudos são organizados por grupo e comparados.
+
+\subsection{Levantamento bibliográfico}
+
+O processo de busca e triagem foi inspirado nas recomendações do PRISMA \citep{page2021prisma}, sem pretender cumpri-las integralmente: a triagem foi feita por título e resumo, por um único revisor. As buscas foram executadas diretamente no IEEE Xplore e no Google Scholar. ACM Digital Library, SpringerLink e ScienceDirect foram cobertas pelo OpenAlex, filtrando pelo prefixo de DOI de cada editora. Scopus e Web of Science exigem acesso institucional e não foram consultadas. Uma primeira versão da string, que exigia apenas a co-ocorrência dos termos, retornou 289 registros únicos, dos quais 176 passaram nos critérios. Esse volume inviabilizava a leitura completa e era dominado por artigos que propõem um algoritmo novo e usam FedAvg e FedProx apenas como linha de base. A string foi então restringida a estudos cujo \emph{título} declara uma comparação ou avaliação:
+
+\begin{quote}\small
+\texttt{"Federated Learning" AND "FedProx" AND ("FedAvg" OR "Federated Averaging") AND ("Non-IID" OR "Dirichlet" OR "Heterogeneous Data")} [título/resumo]\\
+\texttt{AND ("comparative" OR "comparison" OR "benchmark*" OR "empirical" OR "experimental study" OR "experimental evaluation" OR "performance analysis" OR "performance evaluation" OR "impact of" OR "effect of" OR "evaluating")} [título]
+\end{quote}
+
+Os critérios de inclusão foram: publicação entre 2021 e 2026 (CI1); objeto principal sendo a comparação de algoritmos de agregação sob partições não-IID (CI2); avaliação experimental com FedProx e/ou FedAvg (CI3); métricas quantitativas (CI4); artigo completo revisado por pares (CI5); e texto em inglês ou português (CI6). Foram excluídos estudos cujo foco é privacidade ou ataques e que não comparam os agregadores sob dados não-IID (CE1), estudos de outro tema (CE2), preprints (CE3), surveys sem experimentos (CE4), duplicatas (CE5), propostas de algoritmo novo com FedAvg/FedProx só como linha de base (CE6) e aplicações que usam FL sem analisar a agregação (CE7). Estudos que avaliam privacidade, mas também relatam a comparação de agregadores sob não-IID separadamente, foram mantidos; é o caso de \citet{enang2026optimiser}, \citet{vajjhula2025har} e \citet{marella2025fedonco}, dos quais só se usam os resultados sem mecanismos de privacidade. A Tabela~\ref{tab:fluxo} resume o fluxo. Os 50 registros brutos se reduziram a 18 estudos aceitos, aos quais se somaram 4 vindos de \textit{snowballing} sobre os resultados da primeira busca, totalizando 22. Um artigo aceito em conferência realizada após a data da busca, ainda sem versão publicada, foi excluído por CI5.
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Fluxo de seleção dos estudos (busca de 12/10/2026).}
+    \label{tab:fluxo}
+    \begin{tabular}{@{}p{6.6cm}r@{}}
+        \toprule
+        Etapa & Registros \\
+        \midrule
+        Retorno bruto (IEEE 16, Scholar 29, Springer 4, ScienceDirect 1, ACM 0) & 50 \\
+        Após CI1 (período) & 49 \\
+        Após CI2 (comparação sob não-IID; CE1, CE2, CE6, CE7) & 39 \\
+        Após CI3 e CI4 (experimental, métricas) & 36 \\
+        Após CI5 e CI6 (revisão por pares, idioma) & 25 \\
+        Após remoção de duplicatas (CE5) & 22 \\
+        Incertos, sem resumo acessível & $-4$ \\
+        Aceitos na busca & 18 \\
+        \textit{Snowballing} & $+4$ \\
+        \midrule
+        \textbf{Estudos aceitos} & \textbf{22} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Quatro estudos cujo resumo não estava acessível foram classificados como incertos e não entram na análise.
+
+\subsection{Principais trabalhos da literatura}
+
+\paragraph{Benchmarks gerais sob dados não-IID.}
+A referência central é o NIID-Bench \citep{li2022niidbench}, que compara FedAvg, FedProx, SCAFFOLD e FedNova \citep{wang2020fednova} sob desvio de rótulos, de atributos e de quantidade em vários datasets. Sua principal conclusão é que nenhum algoritmo é sempre melhor e que o ranking muda conforme o tipo de desvio, o que motiva este trabalho a variar o tipo de heterogeneidade, e não só o nível. \citet{mora2022empirical}, \citet{nascimento2024dataskew} e \citet{delehouzee2024crosssilo} repetem esse tipo de avaliação em cenários específicos (algoritmos baseados em destilação, diferentes formas de desvio e silos institucionais, respectivamente). Entre os estudos recentes, \citet{enang2026optimiser} usam 20 sementes em CIFAR-10 e MNIST com partições de Dirichlet e por classe e concluem que o FedAdam é o melhor sob heterogeneidade severa, enquanto o FedProx não melhora a estabilidade entre sementes. \citet{ikram2026empirical} comparam FedAvg, FedProx e SCAFFOLD com partições Dirichlet e por classe e discutem gargalos práticos. \citet{sevinc2025distribution} observam, em MNIST e Fashion-MNIST, que o FedProx é apenas ligeiramente mais estável que o FedAvg. \citet{ananouch2025optimization} variam o número de classes por cliente (1, 2 e 5) para emular perfis de dispositivo. \citet{onlu2025aggregation} avaliam seis agregadores em cinco datasets visuais e também concluem que nenhum vence sempre; o FedProx teve desempenho consistente entre os datasets, embora com apenas quatro clientes e modelos com \textit{transfer learning}.
+
+\paragraph{Aplicações em saúde.}
+É o domínio com mais estudos, porque hospitais são silos de dados naturalmente heterogêneos. O FedProx foi o melhor e o mais robusto no diagnóstico de Alzheimer por ressonância \citep{mahmood2025alzheimer} e equilibrou desempenho e privacidade na segmentação tumoral do FedOnco-Bench \citep{marella2025fedonco}. Por outro lado, no reconhecimento de atividades humanas o FedAvg atingiu 97\% de acurácia contra 91\% do FedProx no cenário não-IID \citep{vajjhula2025har}. \citet{mim2025healthcare} comparam cinco algoritmos em MIMIC-III, MedMNIST e BraTS considerando convergência, comunicação e justiça entre clientes. \citet{quintana2026mammography} estudam a heterogeneidade por densidade mamária, e \citet{tekrour2026diabetes} variam explicitamente $\mu \in \{0{,}1; 0{,}5; 1{,}0\}$ no diagnóstico de diabetes, um dos poucos trabalhos que tratam $\mu$ como variável.
+
+\paragraph{IoT, borda e outras aplicações.}
+\citet{hu2025uav} avaliam FedAvg, FedProx, FedOpt e MOON para enxames de drones e concluem que a regularização local é decisiva sob não-IID. \citet{carranco2025adhoc} executam FedAvg, FedProx, FedNova e FedAvgM em uma rede \textit{ad hoc} de Raspberry Pi, o único estudo do conjunto em hardware de borda real. Nele, o FedAvgM foi o mais robusto ao não-IID. O ParkFL \citep{bakr2026parkfl} compara algoritmos do NVFlare na detecção de vagas de estacionamento e relata \textit{overhead} de comunicação abaixo de 3\%. \citet{ghosh2026renewable} cruzam quatro eixos de heterogeneidade em mais de 190 condições na previsão de energia renovável e mostram degradação de até 83\% no erro do FedAvg. Em linguagem natural, o FedProx superou FedAvg e FedNova em bengali \citep{julekha2026bangla}, mas no \textit{instruction tuning} de um modelo de linguagem leve o FedAvg teve a menor perda, e o FedProx, o melhor ROUGE-L \citep{tan2026instruction}.
+
+\paragraph{Heterogeneidade de sistema.}
+\citet{cheng2026stragglers} avaliam o efeito de clientes lentos (\textit{stragglers}) sobre FedAvg e FedProx em cinco datasets, do IID ao altamente não-IID. É o cenário que motivou o FedProx originalmente e aquele em que os dois algoritmos mais divergem.
+
+\subsection{Comparação inicial}
+
+A Tabela~\ref{tab:comparacao} compara os estudos mais próximos deste trabalho. Três padrões se destacam.
+
+\begin{table*}[t]
+    \centering\scriptsize
+    \caption{Comparação entre estudos selecionados (informações extraídas de título e resumo). ``Dir.'' = Dirichlet; ``Pat.'' = partição patológica/por classe; ``Qtd.'' = desvio de quantidade; \checkmark\ = presente; -- = não relatado.}
+    \label{tab:comparacao}
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}p{2.6cm}p{3.3cm}p{2.9cm}p{1.6cm}cccp{2.7cm}@{}}
+        \toprule
+        Estudo & Algoritmos & Domínio / dados & Heterog. & Varia $\mu$ & Custo medido & HW real & Achado sobre FedProx \\
+        \midrule
+        \citet{li2022niidbench} & FedAvg, FedProx, SCAFFOLD, FedNova & Visão, tabular & Dir., Pat., Qtd., atrib. & -- & -- & -- & Nenhum algoritmo domina; depende do tipo de desvio \\
+        \citet{enang2026optimiser} & FedAvg, FedProx, FedAdam, DP-FedAvg & CIFAR-10, MNIST & Dir., Pat. & -- & -- & -- & Não melhora estabilidade entre sementes; FedAdam vence no severo \\
+        \citet{ikram2026empirical} & FedAvg, FedProx, SCAFFOLD & 2 datasets & Dir., Pat. & -- & -- & -- & Discute gargalos práticos \\
+        \citet{sevinc2025distribution} & FedAvg, FedProx & MNIST, F-MNIST & IID × não-IID & -- & -- & -- & Ligeiramente mais estável \\
+        \citet{ananouch2025optimization} & FedAvg, FedProx & MNIST & Pat. (1/2/5 classes) & -- & -- & -- & Acurácia e convergência em 200 rodadas \\
+        \citet{onlu2025aggregation} & 6 agregadores & 5 datasets visuais & n.i. & -- & -- & -- & Consistente; nenhum vence sempre \\
+        \citet{mahmood2025alzheimer} & FedAvg, FedProx, FedSGD, FedBN & MRI (Alzheimer) & não-IID & -- & -- & -- & Melhor (acc.\ 0,806; AUC 0,869) \\
+        \citet{vajjhula2025har} & FedAvg, FedProx, Krum & UCI HAR & IID × não-IID & -- & -- & -- & Pior que FedAvg (91\% × 97\%) \\
+        \citet{tekrour2026diabetes} & FedAvg, FedProx, FedSGD & Pima (diabetes) & não-IID & \checkmark & -- & -- & $\mu \in \{0{,}1; 0{,}5; 1{,}0\}$ \\
+        \citet{carranco2025adhoc} & FedAvg, FedProx, FedNova, FedAvgM & Telco Churn & IID × não-IID & -- & -- & \checkmark & FedAvgM mais robusto \\
+        \citet{bakr2026parkfl} & FedAvg, FedProx, FedOpt, SCAFFOLD & Vagas (imagens reais) & natural & -- & comun. & -- & mAP 99,5\%; comunicação $<$3\% \\
+        \citet{cheng2026stragglers} & FedAvg, FedProx & 5 datasets & IID → não-IID & -- & -- & -- & Diverge sob \textit{stragglers} \\
+        \citet{tan2026instruction} & FedAvg, FedProx, FedQSN & Dolly 15K (LLM) & não-IID & -- & comun. & -- & Melhor ROUGE-L; perda maior que a do FedAvg \\
+        \midrule
+        \textbf{Este trabalho} & FedAvg, FedProx, SCAFFOLD, FedAvgM, FedAdam & CIFAR-10, F-MNIST & Dir.\ (5 $\alpha$), Pat., Qtd. & \checkmark & local & CPU restrita & Mapa $\alpha \times \mu \times$ (acurácia, custo) \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+O primeiro padrão é que \textbf{os resultados se contradizem}. Entre os estudos levantados, o FedProx é o melhor ou o mais estável em quatro \citep{mahmood2025alzheimer, sevinc2025distribution, julekha2026bangla, onlu2025aggregation}, perde para o FedAvg em um \citep{vajjhula2025har}, tem resultado misto em outro \citep{tan2026instruction}, e três apontam que nenhum algoritmo domina ou que outro vence \citep{li2022niidbench, enang2026optimiser, carranco2025adhoc}. Parte da divergência vem de domínios e modelos diferentes. Outra parte pode vir de fatores que os resumos raramente relatam: o valor de $\mu$, que só um estudo declara variar, e o número de execuções por configuração.
+
+O segundo padrão é que \textbf{o custo computacional local não é relatado}. Quando os resumos mencionam custo, ele é de comunicação \citep{bakr2026parkfl, tan2026instruction}, justamente o item em que FedProx e FedAvg são idênticos por construção. O custo do termo proximal no cliente, que é o que pesa em um dispositivo de borda, não é relatado no resumo de nenhum estudo do conjunto. Apenas \citet{carranco2025adhoc} usam hardware restrito.
+
+O terceiro padrão é que \textbf{falta um limiar de heterogeneidade}. Muitos estudos comparam apenas ``IID × não-IID''. Os que usam Dirichlet não relatam, nos resumos, a partir de qual nível de heterogeneidade o FedProx passa a compensar. Essas três lacunas definem o desenho experimental descrito na Seção~\ref{sec:metodologia}.
