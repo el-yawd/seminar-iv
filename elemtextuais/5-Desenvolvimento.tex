@@ -198,7 +198,7 @@ A Tabela~\ref{tab:cenarios} relaciona cada cenário à questão que ele responde
         C2 & Sensibilidade a $\mu$ & Cruza os três valores de $\mu$ com todos os $\alpha$. Separa ``o FedProx não funciona'' de ``$\mu$ mal escolhido'', confusão presente em boa parte da literatura. & H2 & A \\
         C3 & Tipo de heterogeneidade & Compara a partição patológica ($k = 2$ classes) e o desvio só de quantidade, com rótulos IID. Verifica se o efeito do FedProx muda com o tipo de desvio, como sugere o NIID-Bench, usando as dez sementes confirmatórias. & H3 & C \\
         C4 & Custo local em CPU restrita & Mede o tempo por época e a memória de pico de FedAvg e FedProx em 1 thread de CPU. Combinado a $R_\tau$ de C1, estima o custo total até o alvo. & H4 & micro-exp. \\
-        C5 & \textit{Stragglers} (opcional) & Parte dos clientes executa só uma fração das épocas locais. Reproduz a motivação original do FedProx e o cenário de \citet{cheng2026stragglers}. & extensão & -- \\
+        C5 & \textit{Stragglers} (opcional) & Parte dos clientes executa só uma fração das épocas locais. Reproduz a motivação original do FedProx \citep{li2020fedprox}. & extensão & -- \\
         \bottomrule
     \end{tabular}
 \end{table*}
