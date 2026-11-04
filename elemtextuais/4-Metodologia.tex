@@ -24,7 +24,7 @@ As hipóteses derivam das lacunas e das contradições identificadas na Seção~
     \item[H1 (nível).] A vantagem de acurácia do FedProx sobre o FedAvg cresce à medida que $\alpha$ diminui. Para $\alpha \geq 1$, as acurácias são equivalentes, com diferença dentro de $\pm\delta$, $\delta = 1$ ponto percentual.
     \item[H2 ($\mu$).] O efeito do FedProx depende de $\mu$. Valores intermediários ($0{,}01 \leq \mu \leq 0{,}1$) dão o maior ganho, e $\mu = 1$ prejudica a acurácia em partições próximas do IID, porque restringe demais o aprendizado local.
     \item[H3 (tipo).] O efeito do FedProx depende do tipo de heterogeneidade. Sob a partição patológica, que concentra o desvio nos rótulos, o FedProx supera o FedAvg. Sob desvio só de quantidade, com rótulos IID, o FedProx é equivalente ao FedAvg (diferença dentro de $\pm\delta$).
-    \item[H4 (custo).] O tempo de computação local por época do FedProx é maior que o do FedAvg, mas a diferença é pequena diante do custo da retropropagação. Sob heterogeneidade severa, a redução de rodadas até a acurácia-alvo torna o custo total do cliente menor com o FedProx.
+    \item[H4 (custo).] O tempo de computação local por época do FedProx é maior que o do FedAvg, mas, com o termo proximal implementado de forma vetorizada, a diferença é pequena diante do custo da retropropagação (razão inferior a 1,10). O \textit{overhead} de 15\% a quase 200\% relatado pelo NIID-Bench \citep{li2022niidbench}, medido por rodada em hardware não descrito pelos autores, é tratado como evidência contrária a ser confrontada. Sob heterogeneidade severa, a redução de rodadas até a acurácia-alvo torna o custo total do cliente menor com o FedProx.
 \end{description}
 
 \subsection{Ambiente experimental}
@@ -64,7 +64,7 @@ Simuladores de rede como iFogSim e EdgeCloudSim não foram usados. Eles modelam 
 
 \subsection{Datasets}
 
-Foram escolhidos dois datasets públicos de classificação de imagens, ambos com dez classes balanceadas, o que permite controlar exatamente o desvio de rótulos introduzido pela partição (Tabela~\ref{tab:datasets}). Ambos estão entre os mais usados nos estudos do levantamento, o que facilita comparar os resultados.
+Foram escolhidos dois datasets públicos de classificação de imagens, ambos com dez classes balanceadas, o que permite controlar exatamente o desvio de rótulos introduzido pela partição (Tabela~\ref{tab:datasets}). O CIFAR-10 está entre os mais usados nos estudos do levantamento, e o Fashion-MNIST também é usado no NIID-Bench, o que facilita comparar os resultados.
 
 \begin{table}[ht]
     \centering\small
