@@ -1,0 +1,79 @@
+[
+  {
+    "partition": "dirichlet",
+    "alpha": 0.05,
+    "tries": 930,
+    "seconds": 0.66,
+    "size_min": 5,
+    "size_med": 449,
+    "size_max": 3163,
+    "k90_med": 2.0,
+    "k90_mean": 1.84
+  },
+  {
+    "partition": "dirichlet",
+    "alpha": 0.1,
+    "tries": 4,
+    "seconds": 0.03,
+    "size_min": 7,
+    "size_med": 383,
+    "size_max": 3246,
+    "k90_med": 2.0,
+    "k90_mean": 2.42
+  },
+  {
+    "partition": "dirichlet",
+    "alpha": 0.5,
+    "tries": 1,
+    "seconds": 0.02,
+    "size_min": 192,
+    "size_med": 526,
+    "size_max": 1525,
+    "k90_med": 5.0,
+    "k90_mean": 5.44
+  },
+  {
+    "partition": "dirichlet",
+    "alpha": 1,
+    "tries": 1,
+    "seconds": 0.02,
+    "size_min": 202,
+    "size_med": 595,
+    "size_max": 1079,
+    "k90_med": 7.0,
+    "k90_mean": 6.68
+  },
+  {
+    "partition": "dirichlet",
+    "alpha": 100,
+    "tries": 1,
+    "seconds": 0.02,
+    "size_min": 535,
+    "size_med": 597,
+    "size_max": 676,
+    "k90_med": 9.0,
+    "k90_mean": 9.0
+  },
+  {
+    "partition": "pathological",
+    "alpha": null,
+    "tries": 1,
+    "seconds": 0.02,
+    "size_min": 600,
+    "size_med": 600,
+    "size_max": 600,
+    "k90_med": 2.0,
+    "k90_mean": 2.0
+  },
+  {
+    "partition": "quantity",
+    "alpha": null,
+    "tries": 1,
+    "seconds": 0.01,
+    "size_min": 5,
+    "size_med": 404,
+    "size_max": 3681,
+    "k90_med": 9.0,
+    "k90_mean": 8.7
+  }
+]

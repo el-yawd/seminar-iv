@@ -6,3 +6,6 @@ result
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+.venv/
+experimentos/data/
+__pycache__/
