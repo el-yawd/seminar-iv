@@ -1,5 +1,5 @@
 {
-  "key": "fmnist_dirichlet_a0.1_fedprox_mu0.1_s0_T20",
+  "key": "fmnist_dirichlet_a0.1_fedprox_mu0.1_E2_s0_T20",
   "args": {
     "dataset": "fmnist",
     "partition": "dirichlet",

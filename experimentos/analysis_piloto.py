@@ -24,7 +24,7 @@ def load(key):
 
 def k(alpha, strat, mu=None, unsorted=False):
     m = f"_mu{mu:g}" if strat == "fedprox" else ""
-    return f"fmnist_dirichlet_a{alpha:g}_{strat}{m}_s0_T20" + ("_unsorted" if unsorted else "")
+    return f"fmnist_dirichlet_a{alpha:g}_{strat}{m}_E2_s0_T20" + ("_unsorted" if unsorted else "")
 
 
 out = {"sanidade": [], "execucoes": []}

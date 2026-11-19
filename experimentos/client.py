@@ -3,8 +3,11 @@
 A partição a treinar vem na configuração da rodada (chave "pid"), e não do nó: o
 Flower sorteia nós por ID aleatório, o que quebraria o pareamento entre algoritmos.
 """
+import os
 import time
 from functools import lru_cache
+
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")  # exigido por algoritmos determinísticos em CUDA
 
 import numpy as np
 import torch
@@ -14,6 +17,7 @@ import data
 import models
 
 torch.use_deterministic_algorithms(True)
+torch.backends.cudnn.benchmark = False
 
 
 def sync(device):
@@ -47,8 +51,7 @@ def train(net, loader, epochs, lr, mu, device):
 
 @lru_cache(maxsize=2)
 def _dataset(name):
-    xtr, ytr, _, _ = data.load(name)
-    return torch.from_numpy(data.normalize(xtr, name)), torch.from_numpy(ytr)
+    return data.normalized_train(name), data.train_labels(name)
 
 
 @lru_cache(maxsize=2)
@@ -62,8 +65,9 @@ class FLClient(NumPyClient):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         name, pid = config["dataset"], int(config["pid"])
         x, y = _dataset(name)
-        idx = torch.from_numpy(_partitions(config["parts"])[pid])
-        ds = torch.utils.data.TensorDataset(x[idx], y[idx])
+        idx = _partitions(config["parts"])[pid]
+        ds = torch.utils.data.TensorDataset(torch.from_numpy(np.ascontiguousarray(x[idx])),
+                                            torch.from_numpy(y[idx]))
         g = torch.Generator().manual_seed(int(config["seed"]) * 1_000_003
                                           + int(config["round"]) * 1_009 + pid)
         loader = torch.utils.data.DataLoader(ds, batch_size=int(config["batch"]),

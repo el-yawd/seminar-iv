@@ -1,0 +1,10 @@
+# GPU (Kaggle/Colab, CUDA): pip install -r requirements-gpu.txt
+flwr==1.44.0
+flwr-datasets==0.6.1
+matplotlib==3.11.2
+numpy==2.5.4
+pandas==3.1.1
+ray==2.56.0
+torch==2.15.0
+torchvision==0.29.2
+scipy==1.18.1

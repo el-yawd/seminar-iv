@@ -45,6 +45,26 @@ def normalize(x, name):
     return (x.astype(np.float32) / 255.0 - mean) / std
 
 
+def normalized_train(name):
+    """Treino normalizado (float32) em cache .npy, aberto com mmap: os atores do Ray
+    compartilham o cache de páginas em vez de descompactar e normalizar cada um."""
+    f = DATA_DIR / f"{name}_xtr_norm.npy"
+    if not f.exists():
+        xtr, _, _, _ = load(name)
+        tmp = f.with_suffix(".tmp.npy")
+        np.save(tmp, normalize(xtr, name))
+        tmp.replace(f)
+    return np.load(f, mmap_mode="r")
+
+
+def train_labels(name):
+    f = DATA_DIR / f"{name}_ytr.npy"
+    if not f.exists():
+        _, ytr, _, _ = load(name)
+        np.save(f, ytr)
+    return np.load(f)
+
+
 def dirichlet(y, alpha, rng, k=N_CLIENTS):
     """Para cada classe c, p_c ~ Dir_K(alpha). Re-sorteia até todo cliente ter >= MIN_SIZE."""
     classes = np.unique(y)

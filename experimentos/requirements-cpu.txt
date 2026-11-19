@@ -1,3 +1,4 @@
+# CPU (local): pip install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 flwr==1.44.0
 flwr-datasets==0.6.1
 matplotlib==3.11.2
@@ -6,3 +7,4 @@ pandas==3.1.1
 ray==2.56.0
 torch==2.15.0+cpu
 torchvision==0.29.2+cpu
+scipy==1.18.1

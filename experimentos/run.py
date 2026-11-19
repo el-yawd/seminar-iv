@@ -31,7 +31,7 @@ def key_of(a):
     mu = f"_mu{a.mu:g}" if a.strategy == "fedprox" else ""
     alpha = f"_a{a.alpha:g}" if a.partition == "dirichlet" else ""
     tag = "_unsorted" if a.unsorted else ""
-    return f"{a.dataset}_{a.partition}{alpha}_{a.strategy}{mu}_s{a.seed}_T{a.rounds}{tag}"
+    return f"{a.dataset}_{a.partition}{alpha}_{a.strategy}{mu}_E{a.epochs}_s{a.seed}_T{a.rounds}{tag}"
 
 
 def evaluate(net, x, y, batch=1000):
@@ -73,6 +73,7 @@ def main():
 
     # partição determinística, salva para os clientes
     xtr, ytr, xte, yte = data.load(a.dataset)
+    data.normalized_train(a.dataset); data.train_labels(a.dataset)  # cria o cache antes dos atores
     tr, te, tries = data.make_partitions(ytr, a.partition, a.alpha, a.seed)
     parts_dir = data.DATA_DIR / "parts"; parts_dir.mkdir(exist_ok=True)
     part_key = f"{a.dataset}_{a.partition}" + (f"_a{a.alpha:g}" if a.partition == "dirichlet" else "") + f"_s{a.seed}"
@@ -115,7 +116,8 @@ def main():
     server_app = ServerApp(server_fn=lambda ctx: ServerAppComponents(
         strategy=strat, config=ServerConfig(num_rounds=a.rounds)))
     run_simulation(server_app=server_app, client_app=client_app, num_supernodes=a.clients,
-                   backend_config={"client_resources": {"num_cpus": 1, "num_gpus": 0.0}})
+                   backend_config={"client_resources": {"num_cpus": 1,
+                                                       "num_gpus": 0.1 if torch.cuda.is_available() else 0.0}})
 
     local = np.array(state["final"] or [np.nan])
     sizes = np.array([len(t) + len(s) for t, s in zip(tr, te)])
