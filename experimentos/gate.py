@@ -50,7 +50,7 @@ for s in SEEDS:
     acc_gain = d.d_acc[10] - d.d_acc[2]
     p10_gain = d.d_p10[10] - d.d_p10[2]
     ok = acc_gain >= 1 or p10_gain >= 3
-    votes.append(ok)
+    votes.append(bool(ok))
     print(f"semente {s}: Δacc(E10)-Δacc(E2) = {acc_gain:+.2f} p.p.; ΔP10(E10)-ΔP10(E2) = {p10_gain:+.2f} p.p. -> {'sim' if ok else 'não'}")
 print(f"\nsementes completas: {len(votes)}/3; a favor: {sum(votes)}")
 if len(votes) == 3:

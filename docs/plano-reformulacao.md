@@ -1,6 +1,11 @@
 # Plano de reformulação: heterogeneidade × trabalho local
 
 Plano de implementação para reformular a pergunta de pesquisa após o piloto de 18/11/2026.
+
+> **Situação em 21/11/2026: gate negativo, plano original mantido (E = 2).** Ver a seção 5.1.
+> As seções 2, 3, 6 e 7 deixam de valer; os blocos `A2`, `D2` e `cifar` do
+> `grid.py` ficam no código, mas não serão executados.
+
 Prazo final da entrega: 15/12/2026. Situação de partida: commit `3e0d3ce`.
 
 ---
@@ -207,6 +212,32 @@ o de E = 2 em pelo menos 3 p.p. em 2 das 3 sementes.
 
 Os dois caminhos usam o mesmo código; só muda a lista de blocos.
 
+### 5.1 Resultado (21/11/2026)
+
+Bloco G concluído no laptop (18 execuções, ~2,2 h de CPU somadas; nenhuma falha). Avaliação com
+`experimentos/gate.py`; resumo em `experimentos/results/gate_resumo.json`.
+
+| Semente | Δacc(E10) − Δacc(E2) | ΔP10(E10) − ΔP10(E2) | Voto |
+|---|---:|---:|---|
+| 0 | −0,40 p.p. | +1,73 p.p. | não |
+| 1 | −0,51 p.p. | −2,82 p.p. | não |
+| 2 | −0,28 p.p. | −0,34 p.p. | não |
+
+Médias das 3 sementes:
+
+| E | Acc FedAvg | Acc FedProx | Δacc | P10 FedAvg | P10 FedProx | ΔP10 | Tempo/execução |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 69,0 | 69,1 | +0,12 | 31,3 | 30,5 | −0,80 | 4,8 min |
+| 5 | 73,5 | 73,5 | −0,03 | 42,3 | 42,2 | −0,16 | 6,1 min |
+| 10 | 77,1 | 76,9 | −0,27 | 48,6 | 47,4 | −1,28 | 11,0 min |
+
+**Decisão: manter o plano original.** Δacc fica em [−0,45; +0,44] p.p. nas 9 células e é
+levemente negativo em E = 10 nas 3 sementes. Mais trabalho local melhora os dois algoritmos por
+igual (~+8 p.p. de acurácia e ~+17 p.p. de P10 de E = 2 para E = 10); com η = 0,01 o *drift* não
+cresce o bastante para o termo proximal com μ = 0,1 atuar. Registrado em `5-Desenvolvimento.tex`
+(seção "Verificação do efeito do trabalho local", `tab:gate`, linha nova em `tab:ajustes`) como
+limitação de validade externa.
+
 ---
 
 ## 6. Mudanças nos documentos
@@ -261,6 +292,6 @@ só a escolha de μ* depende de A'.
 2. [x] `client.py` e `run.py`: `CUBLAS_WORKSPACE_CONFIG`, `cudnn.benchmark = False` e `num_gpus` condicional (ainda não testado em GPU).
 3. [x] `requirements-cpu.txt` e `requirements-gpu.txt`, com `scipy`.
 4. [x] `grid.py`: blocos `G` (18), `A2` (108), `D2` (80), `cifar` (40); regra de T; `--shard i/n`; `--mu-star`.
-5. [~] Bloco G em execução no laptop (18/11, ~3,5 h); avaliação com `experimentos/gate.py`.
-6. [ ] `kaggle.ipynb`; sanidade na GPU; tempo de uma execução com E = 10.
-7. [ ] Decisão do gate e atualização dos documentos.
+5. [x] Bloco G concluído no laptop (interrompido em 18/11, retomado e concluído em 21/11); avaliado com `experimentos/gate.py`.
+6. [ ] `kaggle.ipynb`; sanidade na GPU; tempo de uma execução do bloco A (E = 2, T = 100) na T4.
+7. [x] Decisão do gate (negativa: manter o plano original) e atualização dos documentos.

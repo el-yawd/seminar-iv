@@ -1,0 +1,32 @@
+{
+  "key": "fmnist_dirichlet_a0.1_fedprox_mu0.1_E10_s0_T50",
+  "args": {
+    "dataset": "fmnist",
+    "partition": "dirichlet",
+    "alpha": 0.1,
+    "strategy": "fedprox",
+    "mu": 0.1,
+    "seed": 0,
+    "rounds": 50,
+    "epochs": 10,
+    "lr": 0.01,
+    "batch": 32,
+    "clients": 100,
+    "per_round": 10,
+    "unsorted": false,
+    "force": false
+  },
+  "n_params": 184586,
+  "partition_tries": 4,
+  "client_size_min": 7,
+  "client_size_max": 3246,
+  "local_acc_std": 0.24680135755513827,
+  "local_acc_p10": 0.3648546144121365,
+  "wall_time_s": 698.239202819,
+  "env": {
+    "python": "3.12.16",
+    "torch": "2.15.0+cpu",
+    "cpu": "x86_64",
+    "cuda": false
+  }
+}

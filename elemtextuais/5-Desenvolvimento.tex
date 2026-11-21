@@ -268,9 +268,36 @@ O segundo resultado diz respeito a $\mu$. Com $\mu \in \{0{,}01; 0{,}1\}$, a acu
 
 Primeiro, os níveis de $\alpha$ escolhidos produzem cenários de fato distintos, tanto na composição das partições (Tabela~\ref{tab:particoes}) quanto no comportamento do FedAvg. Isso confirma que a varredura de C1 cobre do regime quase IID ao regime de \textit{drift} severo, condição necessária para procurar o limiar de H1.
 
-Segundo, com $\mu \leq 0{,}1$ o termo proximal quase não alterou o treinamento. Uma explicação plausível é o pequeno número de passos locais da configuração fixa: com $E = 2$, lotes de 32 e $\eta = 0{,}01$, o cliente mediano dá cerca de 20 passos de SGD por rodada com $\alpha = 0{,}1$ e cerca de 30 com $\alpha = 100$, e o modelo local se afasta pouco de $w^t$. Como a penalidade é proporcional a $\lVert w - w^t\rVert^2$, ela só pesa quando o afastamento é grande. \citet{li2020fedprox} avaliaram o FedProx com até 20 épocas locais, regime em que o \textit{drift} é maior. Se o padrão se mantiver com 100 rodadas e cinco sementes no bloco A, será um resultado relevante para QP1, pois indicaria que parte da contradição da literatura vem do número de passos locais, e não só do grau de heterogeneidade. O teste de equivalência (TOST) previsto para H1 é o instrumento adequado para sustentar essa conclusão. O número de épocas locais, porém, não será alterado agora, para não mudar o desenho experimental com base em uma única semente.
+Segundo, com $\mu \leq 0{,}1$ o termo proximal quase não alterou o treinamento. Uma explicação plausível é o pequeno número de passos locais da configuração fixa: com $E = 2$, lotes de 32 e $\eta = 0{,}01$, o cliente mediano dá cerca de 20 passos de SGD por rodada com $\alpha = 0{,}1$ e cerca de 30 com $\alpha = 100$, e o modelo local se afasta pouco de $w^t$. Como a penalidade é proporcional a $\lVert w - w^t\rVert^2$, ela só pesa quando o afastamento é grande. \citet{li2020fedprox} avaliaram o FedProx com até 20 épocas locais, regime em que o \textit{drift} é maior. Se o padrão se mantiver com 100 rodadas e cinco sementes no bloco A, será um resultado relevante para QP1, pois indicaria que parte da contradição da literatura vem do número de passos locais, e não só do grau de heterogeneidade. O teste de equivalência (TOST) previsto para H1 é o instrumento adequado para sustentar essa conclusão. Para não mudar o desenho experimental com base em uma única semente, essa explicação foi testada antes em um bloco curto de verificação (Seção~\ref{sec:gate}).
 
 Terceiro, o comportamento de $\mu = 1$ está na direção prevista por H2: prejudica a acurácia no regime quase IID e, no regime heterogêneo, não muda a média, mas parece reduzir a oscilação e melhorar os clientes mais mal atendidos. O ganho de 14,8~p.p. no percentil 10 deve ser lido com cautela: além de vir de uma só semente, com $\alpha = 0{,}1$ o percentil 10 recai sobre clientes com cerca de 10 amostras de teste local (os dois menores têm 1 e 2), o que o torna instável. Ainda assim, a observação reforça a decisão de reportar a dispersão entre clientes ao lado da acurácia global, já que o efeito do FedProx pode aparecer na cauda da distribuição e não na média. Quanto ao custo, o acréscimo de 1\% a 9\% no tempo por época é compatível com a razão inferior a 1,10 prevista em H4 e muito menor que os 15\% a quase 200\% do NIID-Bench \citep{li2022niidbench}. A medição, porém, foi feita com 10 clientes disputando a mesma CPU, e só o micro-experimento C4, em 1 \textit{thread} e com 30 repetições, pode confirmá-la.
+
+\subsection{Verificação do efeito do trabalho local}
+\label{sec:gate}
+
+A segunda observação do piloto sugeria acrescentar o número de épocas locais $E$ como fator e reformular a pergunta de pesquisa em torno da interação entre heterogeneidade e trabalho local. Antes de adotar essa mudança, foi executado um bloco de verificação (bloco G) com um critério de decisão fixado previamente. O bloco tem 18 execuções: FedAvg e FedProx com $\mu = 0{,}1$, $\alpha = 0{,}1$, $E \in \{2; 5; 10\}$, sementes 0 a 2 e $T = 50$, na mesma CPU do piloto. Com $\Delta$ definido como a diferença FedProx $-$ FedAvg na mesma semente, a reformulação seria adotada se, em pelo menos duas das três sementes, $\Delta$acc com $E = 10$ superasse o de $E = 2$ em 1~p.p. ou mais, ou $\Delta$P10 o superasse em 3~p.p. ou mais. A avaliação é feita por \texttt{experimentos/gate.py}.
+
+O critério não foi atendido em nenhuma semente (Tabela~\ref{tab:gate}). Em todas as nove combinações de $E$ e semente, $\Delta$acc ficou entre $-0{,}45$ e $+0{,}44$~p.p., e com $E = 10$ foi levemente negativo nas três sementes: o ganho de $\Delta$acc de $E = 2$ para $E = 10$ foi de $-0{,}40$, $-0{,}51$ e $-0{,}28$~p.p., e o de $\Delta$P10, de $+1{,}73$, $-2{,}82$ e $-0{,}34$~p.p. O aumento de $E$ melhorou os dois algoritmos na mesma medida: a acurácia global média subiu cerca de 8~p.p. e o percentil 10 dos clientes, cerca de 17~p.p., de $E = 2$ para $E = 10$. A instabilidade também caiu um pouco nos dois.
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Bloco G ($\alpha = 0{,}1$, $\mu = 0{,}1$, $T = 50$): médias das sementes 0 a 2. Acc.: acurácia global média nas rodadas 46--50 (\%); P10: percentil 10 da acurácia do modelo final nos testes locais (\%); $\Delta$: FedProx $-$ FedAvg na mesma semente (p.p.); $t$: tempo de parede de uma execução (min).}
+    \label{tab:gate}
+    \setlength{\tabcolsep}{3.5pt}
+    \begin{tabular}{@{}crrrrrrr@{}}
+        \toprule
+        & \multicolumn{3}{c}{Acc.} & \multicolumn{3}{c}{P10} & \\
+        \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+        $E$ & FedAvg & FedProx & $\Delta$ & FedAvg & FedProx & $\Delta$ & $t$ \\
+        \midrule
+        2  & 69{,}0 & 69{,}1 & $+0{,}12$ & 31{,}3 & 30{,}5 & $-0{,}80$ & 4{,}8 \\
+        5  & 73{,}5 & 73{,}5 & $-0{,}03$ & 42{,}3 & 42{,}2 & $-0{,}16$ & 6{,}1 \\
+        10 & 77{,}1 & 76{,}9 & $-0{,}27$ & 48{,}6 & 47{,}4 & $-1{,}28$ & 11{,}0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Com isso, mantém-se o planejamento original, com $E = 2$ fixo. Nesta configuração ($\eta = 0{,}01$, lotes de 32, 10 de 100 clientes por rodada), o \textit{drift} produzido por mais trabalho local não é grande o bastante para que a penalidade proximal com $\mu = 0{,}1$ faça diferença, e o pouco trabalho local não explica, sozinho, a ausência de efeito do FedProx observada no piloto. O resultado será retomado na discussão como limitação de validade externa: as conclusões sobre $\mu$ valem para o regime de taxa de aprendizado e de número de passos locais adotado, e regimes com mais passos ou com $\eta$ maior, como os de \citet{li2020fedprox}, podem se comportar de outra forma.
 
 \subsection{Tempo de execução e orçamento}
 
@@ -299,17 +326,18 @@ A Tabela~\ref{tab:ajustes} reúne as diferenças entre o que foi planejado na Se
         Piloto em GPU no Kaggle (T4) & Prioridade dada a validar o \textit{pipeline} antes de consumir a cota & Piloto em CPU local; a medição de tempo na T4 passa a ser o primeiro passo dos blocos A e B \\
         SCAFFOLD via \textit{baselines} do Flower & Não é estratégia nativa do Flower 1.44 e altera também o cliente & Integração adiada para o bloco B; se não couber no prazo, o bloco B fica com FedAvgM e FedAdam \\
         Estimativa de cerca de 1~min por execução do F-MNIST (T4) & Na CPU local, 20 rodadas levam de 173 a 233~s, com cerca de 85~s fixos, e o tempo da rodada é ditado pelo maior cliente & Orçamento a confirmar na T4 antes da grade; divisão dos blocos entre Kaggle e CPU local; corte prioritário no bloco B \\
+        Épocas locais fixas ($E = 2$) & No piloto, $\mu \leq 0{,}1$ não alterou o treinamento, possivelmente pelo pouco trabalho local & Bloco G de verificação (18 execuções, cerca de 2~h de CPU); critério não atendido, $E = 2$ mantido (Seção~\ref{sec:gate}) \\
         \bottomrule
     \end{tabular}
 \end{table*}
 
 \subsection{Situação em relação ao cronograma}
 
-Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores; o OE2 foi atingido com o protótipo e o teste de sanidade, faltando apenas os algoritmos de referência no bloco B; o OE3 foi atendido para o Fashion-MNIST, faltando gerar as partições do CIFAR-10 e das sementes confirmatórias, o que é automático a partir da semente; e os OE4 e OE5 foram iniciados com o piloto, que já registra todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. As atividades previstas até 17 de novembro foram concluídas, com o piloto executado em CPU local em vez de GPU. A principal pendência herdada pela etapa seguinte é confirmar o tempo por execução na T4.
+Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores; o OE2 foi atingido com o protótipo e o teste de sanidade, faltando apenas os algoritmos de referência no bloco B; o OE3 foi atendido para o Fashion-MNIST, faltando gerar as partições do CIFAR-10 e das sementes confirmatórias, o que é automático a partir da semente; e os OE4 e OE5 foram iniciados com o piloto, que já registra todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. As atividades previstas até 17 de novembro foram concluídas, com o piloto executado em CPU local em vez de GPU. O bloco de verificação do trabalho local (Seção~\ref{sec:gate}), não previsto no cronograma, consumiu de 18 a 21 de novembro e manteve o desenho original. A principal pendência herdada pela etapa seguinte é confirmar o tempo por execução na T4.
 
 \begin{table}[ht]
     \centering\small
-    \caption{Situação das atividades do cronograma em 18 de novembro de 2026.}
+    \caption{Situação das atividades do cronograma em 21 de novembro de 2026.}
     \label{tab:status}
     \begin{tabular}{@{}p{3.9cm}p{1.6cm}p{2.3cm}@{}}
         \toprule
@@ -317,6 +345,7 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
         \midrule
         Levantamento bibliográfico e referencial & set.--out. & concluído \\
         Ambiente, piloto e teste de sanidade & 11--17 nov. & concluído (piloto em CPU) \\
+        Verificação do trabalho local (bloco G) & -- & concluído; $E = 2$ mantido \\
         Blocos A e B + escolha de $\mu^*$ & 18--24 nov. & em andamento \\
         Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & a executar; partições geradas só para a semente 0 \\
         Micro-experimento de custo em CPU & 25 nov.--8 dez. & a executar \\
