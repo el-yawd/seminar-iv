@@ -45,6 +45,15 @@ def block(name, dataset, mu_star=0.1):
         return [dict(base, alpha=a, strategy=s, mu=m, seed=sd, rounds=100)
                 for sd in range(5) for a in ALPHAS
                 for s, m in [("fedavg", 0.0)] + [("fedprox", m) for m in MUS]]
+    # --- plano original, confirmatório (Metodologia, tab:blocos): FedAvg x FedProx mu*, sementes 5-14 ---
+    if name == "C":  # tipo de heterogeneidade: patológica (k = 2) e quantidade (rótulos IID)
+        return [dict(dataset=dataset, partition=part, strategy=s, mu=m, seed=sd, rounds=100)
+                for sd in range(5, 15) for part in ("pathological", "quantity")
+                for s, m in (("fedavg", 0.0), ("fedprox", mu_star))]
+    if name == "D":  # nível de heterogeneidade: 5 alpha
+        return [dict(base, alpha=a, strategy=s, mu=m, seed=sd, rounds=100)
+                for sd in range(5, 15) for a in ALPHAS
+                for s, m in (("fedavg", 0.0), ("fedprox", mu_star))]
     if name == "B":
         return [dict(base, alpha=a, strategy=s, seed=sd, rounds=100)
                 for sd in range(3) for a in ALPHAS for s in ("fedavgm", "fedadam")]
@@ -65,14 +74,18 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--block", required=True)
     p.add_argument("--dataset", default="fmnist")
-    p.add_argument("--mu-star", type=float, default=0.1, help="mu* para os blocos D2 e cifar")
-    p.add_argument("--shard", default="0/1", help="i/n: executa só a i-ésima de n fatias (dividir entre máquinas)")
+    p.add_argument("--mu-star", type=float, default=0.1, help="mu* para os blocos C, D, D2 e cifar")
+    p.add_argument("--shard", default="0/1",
+                   help="i/n: executa só a i-ésima de n fatias de sementes (dividir entre máquinas). "
+                        "A divisão é por semente, para que FedAvg e FedProx da mesma semente rodem na mesma máquina.")
     a = p.parse_args()
     if a.block == "cifar":
         a.dataset = "cifar10"
     cfgs = block(a.block, a.dataset, a.mu_star)
     i, n = map(int, a.shard.split("/"))
-    cfgs = cfgs[i::n]
+    seeds = sorted({c["seed"] for c in cfgs})[i::n]
+    cfgs = [c for c in cfgs if c["seed"] in seeds]
+    print(f"shard {i}/{n}: sementes {seeds}, {len(cfgs)} configurações", flush=True)
     for i, c in enumerate(cfgs, 1):
         print(f"=== {i}/{len(cfgs)} {c}", flush=True)
         r = subprocess.run([sys.executable, str(HERE / "run.py"), *to_args(c)])

@@ -34,6 +34,17 @@ def key_of(a):
     return f"{a.dataset}_{a.partition}{alpha}_{a.strategy}{mu}_E{a.epochs}_s{a.seed}_T{a.rounds}{tag}"
 
 
+def cpu_model():
+    """Modelo da CPU (identifica a máquina que gerou o resultado; platform.processor() é vazio no Linux)."""
+    try:
+        for line in Path("/proc/cpuinfo").read_text().splitlines():
+            if line.startswith("model name"):
+                return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or platform.machine()
+
+
 def evaluate(net, x, y, batch=1000):
     net.eval()
     correct, loss = 0, 0.0
@@ -126,7 +137,9 @@ def main():
                    local_acc_std=float(np.nanstd(local)), local_acc_p10=float(np.nanpercentile(local, 10)),
                    wall_time_s=time.perf_counter() - t_start,
                    env=dict(python=platform.python_version(), torch=torch.__version__,
-                            cpu=platform.processor() or platform.machine(), cuda=torch.cuda.is_available()))
+                            cpu=platform.processor() or platform.machine(), cuda=torch.cuda.is_available(),
+                            cpu_model=cpu_model(), n_cpus=os.cpu_count(), host=platform.node(),
+                            gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else None))
     (RESULTS / f"{key}.json").write_text(json.dumps(summary, indent=2))
     print(f"[done] {key} em {summary['wall_time_s']:.0f} s")
 
