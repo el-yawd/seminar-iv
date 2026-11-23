@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>ATV 06 – Segundo Acompanhamento</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --navy: #0d3466;
+    --navy-2: #1d4f8f;
+    --red: #c4302b;
+    --ink: #1b2430;
+    --muted: #5b6676;
+    --line: #d9dee6;
+    --soft: #f3f5f9;
+    --ok: #2e7d4f;
+    --ok-bg: #e5f3ea;
+    --wip: #a86400;
+    --wip-bg: #fdf0db;
+    --todo: #5b6676;
+    --todo-bg: #eceff3;
+    --late: #b3261e;
+    --late-bg: #fbe5e3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body {
+    font-family: "Noto Sans", "Ubuntu Sans", "DejaVu Sans", sans-serif;
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.38;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    font-variant-numeric: tabular-nums;
+  }
+  .slide {
+    width: 1280px; height: 720px;
+    position: relative; overflow: hidden;
+    page-break-after: always; break-after: page;
+    padding: 34px 48px 50px;
+    display: flex; flex-direction: column;
+  }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+
+  /* cabeçalho */
+  .head { display: flex; align-items: baseline; gap: 16px; border-bottom: 3px solid var(--navy); padding-bottom: 10px; margin-bottom: 18px; }
+  .head .num { font-weight: 700; color: #fff; background: var(--navy); border-radius: 6px; padding: 2px 10px; font-size: 18px; }
+  .head h1 { margin: 0; font-size: 29px; color: var(--navy); letter-spacing: -0.2px; }
+  .head .sub { margin-left: auto; color: var(--muted); font-size: 15px; white-space: nowrap; }
+
+  .foot { position: absolute; left: 48px; right: 48px; bottom: 16px; display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+
+  h2 { font-size: 18px; color: var(--navy); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.6px; }
+  h3 { font-size: 16.5px; margin: 0 0 4px; color: var(--ink); }
+  p { margin: 0 0 6px; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 0.88em; background: var(--soft); padding: 0 4px; border-radius: 3px; white-space: nowrap; }
+  b { color: var(--navy); }
+  .muted { color: var(--muted); }
+  .small { font-size: 16px; }
+  .xs { font-size: 13.5px; }
+
+  .cols { display: grid; gap: 26px; flex: 1; min-height: 0; }
+  .c2 { grid-template-columns: 1fr 1fr; }
+  .c2w { grid-template-columns: 1.08fr 0.92fr; }
+  .box { background: var(--soft); border-radius: 10px; padding: 14px 18px; }
+  .callout { border-left: 5px solid var(--red); background: #fbf1f0; border-radius: 0 10px 10px 0; padding: 10px 16px; }
+  .callout.blue { border-left-color: var(--navy-2); background: #eef3fa; }
+
+  /* status */
+  .st { display: inline-block; font-size: 12.5px; font-weight: 700; border-radius: 4px; padding: 1px 7px; white-space: nowrap; }
+  .st.ok { color: var(--ok); background: var(--ok-bg); }
+  .st.wip { color: var(--wip); background: var(--wip-bg); }
+  .st.todo { color: var(--todo); background: var(--todo-bg); }
+  .st.late { color: var(--late); background: var(--late-bg); }
+
+  .check { list-style: none; padding: 0; }
+  .check li { display: grid; grid-template-columns: 26px 1fr; align-items: start; margin-bottom: 6px; }
+  .check li::before { font-weight: 700; }
+  .check li.ok::before { content: "✓"; color: var(--ok); }
+  .check li.no::before { content: "○"; color: var(--muted); }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13.5px; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--navy); }
+  td.r, th.r { text-align: right; }
+  tr.hl td { background: #fff7e8; }
+  .sched td:nth-child(2) { white-space: nowrap; }
+  .sched td { padding: 3px 8px; }
+
+  /* linha do tempo */
+  .tl { list-style: none; padding: 0; margin: 0; position: relative; align-self: start; }
+  .tl::before { content: ""; position: absolute; left: 92px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+  .tl li { display: grid; grid-template-columns: 84px 1fr; gap: 22px; margin-bottom: 12px; position: relative; }
+  .tl li::after { content: ""; position: absolute; left: 87px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--navy); border: 2px solid #fff; }
+  .tl li.wip::after { background: var(--wip); }
+  .tl .d { font-weight: 700; color: var(--navy); font-size: 15px; text-align: right; padding-top: 1px; }
+  .tl .t h3 { display: flex; gap: 10px; align-items: center; }
+
+  /* capa */
+  .cover { padding: 0; }
+  .cover .band { background: var(--navy); color: #fff; padding: 54px 72px 46px; }
+  .cover .kicker { font-size: 18px; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.85; }
+  .cover .act { font-size: 38px; font-weight: 700; margin: 10px 0 0; line-height: 1.15; }
+  .cover .body { padding: 40px 72px 0; flex: 1; display: flex; flex-direction: column; }
+  .cover .title { font-size: 25px; line-height: 1.35; color: var(--ink); font-weight: 600; max-width: 1060px; border-left: 5px solid var(--red); padding-left: 18px; }
+  .cover .people { margin-top: 38px; display: flex; gap: 70px; }
+  .cover .people .lbl { font-size: 13.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+  .cover .people .val { font-size: 22px; font-weight: 600; color: var(--navy); }
+  .cover .bottom { margin-top: auto; padding: 0 0 34px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .cover .logos img { height: 74px; margin-left: 22px; }
+  .cover .meta { font-size: 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- SLIDE 0 – CAPA                                                -->
+<!-- ============================================================ -->
+<section class="slide cover">
+  <div class="band">
+    <div class="kicker">XRSC10 · Metodologia de Pesquisa · ATV 06</div>
+    <div class="act">Segundo Acompanhamento e<br>Progresso Inicial da Pesquisa</div>
+  </div>
+  <div class="body">
+    <div class="title">Análise Comparativa de FedAvg e FedProx sob Diferentes Tipos e Níveis de Heterogeneidade de Dados: Acurácia, Convergência e Custo Computacional</div>
+    <div class="people">
+      <div><div class="lbl">Integrantes</div><div class="val">Diego Reis<br>Augusto Lázaro</div></div>
+      <div><div class="lbl">Professor</div><div class="val">Pioli</div></div>
+    </div>
+    <div class="bottom">
+      <div class="meta">UNIFEI · 23 de novembro de 2026</div>
+      <div class="logos"><img src="logo-unifei.png" alt="UNIFEI"><img src="logo-lab.png" alt=""></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 1 – PLANEJAMENTO E SITUAÇÃO ANTERIOR                    -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="head"><span class="num">1</span><h1>Planejamento e situação no acompanhamento anterior</h1><span class="sub">estado em 18/11/2026</span></div>
+
+  <div class="cols c2w">
+    <div>
+      <h2>O que foi planejado</h2>
+      <div class="box" style="margin-bottom:14px">
+        <p><b>QP1.</b> Em quais níveis e tipos de heterogeneidade o FedProx supera, empata ou perde para o FedAvg (acurácia e estabilidade)?</p>
+        <p style="margin:0"><b>QP2.</b> O custo local do termo proximal é compensado pela redução de rodadas até a acurácia-alvo?</p>
+      </div>
+      <ul class="small">
+        <li>Pesquisa experimental, simulação com <b>Flower + PyTorch</b>, 100 clientes, 10 por rodada, sementes <b>pareadas</b>; hipóteses H1–H4.</li>
+        <li>Projeto fatorial em blocos, por dataset (Fashion-MNIST e CIFAR-10):
+          <table class="xs" style="margin:6px 0 4px">
+            <tr><th>Bloco</th><th>Composição</th><th class="r">Execuções</th></tr>
+            <tr><td>A</td><td>(FedAvg + 3 μ) × 5 α × 5 sementes</td><td class="r">100</td></tr>
+            <tr><td>B</td><td>FedAvgM, FedAdam, SCAFFOLD × 5 α × 3 sementes</td><td class="r">45</td></tr>
+            <tr><td>C</td><td>tipo de partição (patológica, quantidade), μ*, 10 sementes</td><td class="r">40</td></tr>
+            <tr><td>D</td><td>confirmatório: FedAvg × FedProx μ*, 5 α, 10 sementes</td><td class="r">100</td></tr>
+          </table>
+        </li>
+        <li>Micro-experimento de custo (H4) em CPU limitada a 1 <i>thread</i>.</li>
+        <li>Simulações previstas no Kaggle (GPU T4); entrega final em 15/12.</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2>Situação em 18/11</h2>
+      <ul class="check small">
+        <li class="ok"><span>Levantamento bibliográfico (20 estudos) e referencial teórico</span></li>
+        <li class="ok"><span>Protótipo: dados e partições, modelos, cliente com termo proximal, estratégias com sorteio pareado</span></li>
+        <li class="ok"><span>Partições não-IID geradas e verificadas (F-MNIST, semente 0)</span></li>
+        <li class="ok"><span>Piloto: 10 execuções (semente 0, T = 20), em CPU local em vez do Kaggle</span></li>
+        <li class="ok"><span>Teste de sanidade: FedProx μ = 0 ≡ FedAvg em 21/21 rodadas</span></li>
+        <li class="no"><span>Blocos A–D, micro-experimento de custo e análise estatística</span></li>
+        <li class="no"><span>Tempo na T4 não medido; SCAFFOLD não integrado</span></li>
+      </ul>
+      <div class="callout small" style="margin-top:12px">
+        <b style="color:var(--red)">Observação do piloto que guiou a etapa seguinte.</b>
+        Com μ ≤ 0,1, o FedProx ficou a no máximo 0,1 p.p. do FedAvg em α = 0,1 e em α = 100. Explicação levantada: pouco trabalho local (E = 2, cerca de 20 a 30 passos de SGD por rodada), o que deixa o termo proximal sem efeito.
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>Diego Reis · Augusto Lázaro — XRSC10</span><span>ATV 06 · Segundo acompanhamento</span></div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2 – ATIVIDADES DESENVOLVIDAS                            -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="head"><span class="num">2</span><h1>Atividades desenvolvidas desde o último acompanhamento</h1><span class="sub">18/11 → 23/11</span></div>
+
+  <div class="cols" style="grid-template-columns: 1.45fr 0.85fr;">
+    <ul class="tl small">
+      <li><div class="d">18/11</div><div class="t">
+        <h3>Plano de reformulação α × E <span class="st ok">concluído</span></h3>
+        Proposta de incluir as épocas locais (E) como fator, condicionada a um <b>critério de decisão fixado antes</b> de executar (bloco G, o <i>gate</i>).
+      </div></li>
+      <li><div class="d">18–21/11</div><div class="t">
+        <h3>Preparação do código <span class="st ok">concluído</span></h3>
+        E na chave de cada execução; determinismo e uso de GPU (ainda não testados em GPU); dependências separadas para CPU e GPU; novos blocos e divisão entre máquinas (<code>--shard</code>) em <code>grid.py</code>; cache do dataset (1.ª rodada de 27,8&nbsp;s para 23,3&nbsp;s, resultados idênticos).
+      </div></li>
+      <li><div class="d">18–21/11</div><div class="t">
+        <h3>Bloco G executado e avaliado <span class="st ok">concluído</span></h3>
+        18 execuções (FedAvg × FedProx μ = 0,1; α = 0,1; E ∈ {2, 5, 10}; 3 sementes; T = 50), ~2,2 h de CPU, sem falhas. Avaliado por <code>gate.py</code> e registrado no capítulo de Desenvolvimento.
+      </div></li>
+      <li><div class="d">22/11</div><div class="t">
+        <h3>Segunda máquina e teste de reprodutibilidade <span class="st ok">concluído</span></h3>
+        Ryzen 7 3700U, Python 3.13. O JSON de cada execução passa a registrar a máquina; <code>--shard</code> divide por semente; teste entre máquinas com uma execução do piloto.
+      </div></li>
+      <li class="wip"><div class="d">22–23/11</div><div class="t">
+        <h3>Bloco A (F-MNIST, 100 execuções) <span class="st wip">em andamento</span></h3>
+        Iniciado às 23h49 de 22/11, em ordem de semente; sementes 0 a 2 concluídas (<b>60/100</b>) às 13h50 de 23/11, sem falhas. Consolidado por <code>analysis.py</code>.
+      </div></li>
+    </ul>
+
+    <div>
+      <h2>Produtos e evidências</h2>
+      <div class="box small">
+        <ul>
+          <li><code>docs/plano-reformulacao.md</code>: plano, critério do <i>gate</i> e resultado</li>
+          <li><code>experimentos/gate.py</code> e <code>results/gate_resumo.json</code></li>
+          <li>18 registros por rodada (CSV + JSON) do bloco G</li>
+          <li>Capítulo de Desenvolvimento atualizado: seção do trabalho local e tabelas de ajustes e de situação</li>
+          <li><code>docs/registro-vostro.md</code>: diário de decisões da nova máquina</li>
+          <li>Commits <code>de1270c</code> e <code>9930a6d</code> no repositório</li>
+        </ul>
+      </div>
+      <h2 style="margin-top:16px">Etapas</h2>
+      <p class="small"><span class="st ok">concluídas</span> reformulação avaliada, código, bloco G, teste entre máquinas</p>
+      <p class="small"><span class="st wip">em andamento</span> bloco A (F-MNIST): 60 de 100</p>
+    </div>
+  </div>
+
+  <div class="foot"><span>Diego Reis · Augusto Lázaro — XRSC10</span><span>ATV 06 · Segundo acompanhamento</span></div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3 – SITUAÇÃO ATUAL                                      -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="head"><span class="num">3</span><h1>Situação atual da pesquisa</h1><span class="sub">resultados, dificuldades e ajustes</span></div>
+
+  <div class="cols c2">
+    <div>
+      <h2>Resultado 1 · Bloco A, sementes 0–2 (exploratório)</h2>
+      <table class="xs">
+        <tr><th>α</th><th class="r">Acc FedAvg</th><th class="r">P10 FedAvg</th><th class="r">Δ μ = 0,01</th><th class="r">Δ μ = 0,1</th><th class="r">Δ μ = 1</th></tr>
+        <tr><td>0,05</td><td class="r">69,6</td><td class="r">24,4</td><td class="r">+0,02</td><td class="r">+0,16</td><td class="r">+0,13</td></tr>
+        <tr><td>0,1</td><td class="r">76,0</td><td class="r">52,4</td><td class="r">0,00</td><td class="r">+0,02</td><td class="r">−0,48</td></tr>
+        <tr><td>0,5</td><td class="r">82,1</td><td class="r">72,4</td><td class="r">0,00</td><td class="r">−0,09</td><td class="r"><b>−0,93</b></td></tr>
+        <tr><td>1</td><td class="r">83,3</td><td class="r">76,6</td><td class="r">−0,01</td><td class="r">−0,09</td><td class="r"><b>−0,86</b></td></tr>
+        <tr><td>100</td><td class="r">84,6</td><td class="r">81,4</td><td class="r">−0,01</td><td class="r">−0,08</td><td class="r"><b>−0,69</b></td></tr>
+      </table>
+      <p class="xs muted" style="margin-top:3px">F-MNIST, T = 100, E = 2; médias de 3 sementes, sem teste estatístico. Acc (últimas 5 rodadas) e P10 local em %; Δacc = FedProx − FedAvg na mesma semente, em p.p.</p>
+      <ul class="xs" style="margin-top:4px">
+        <li><b>μ ≤ 0,1 quase não muda nada:</b> Δ médio de no máximo 0,09 p.p. em módulo para α ≥ 0,1.</li>
+        <li><b>μ = 1 piora perto do IID</b> (−0,62 a −1,03 p.p. com α ≥ 0,5, nas 3 sementes), como prevê a H2. <b>Com α = 0,05, o sinal varia por semente</b> (+1,06; +0,50; −1,17 p.p.): o ganho das sementes 0–1 não se manteve. Reduz a instabilidade (4,89 → 3,97 p.p.), mas o P10 cai 1,4 p.p.</li>
+        <li>O FedProx não atinge o alvo τ antes do FedAvg em nenhuma combinação; com μ = 1, atinge depois em todos os 14 pares em que o alvo é atingido.</li>
+      </ul>
+
+      <h2 style="margin-top:10px">Resultado 2 · Bloco G (gate)</h2>
+      <ul class="xs">
+        <li>α = 0,1; μ = 0,1; E ∈ {2, 5, 10}; 3 sementes. Critério atendido em <b>0 de 3</b> sementes; Δacc entre −0,45 e +0,44 p.p. nas 9 combinações. Mais E melhora os dois algoritmos por igual.</li>
+        <li><b>Decisão: manter o desenho original (E = 2)</b>; entra como limitação de validade externa.</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2>Dificuldades e ajustes</h2>
+      <table class="small">
+        <tr><th style="width:46%">Dificuldade</th><th>Ajuste</th></tr>
+        <tr><td>Hipótese do pouco trabalho local não se confirmou</td><td>Desenho e hipóteses originais mantidos; reformulação descartada</td></tr>
+        <tr><td>Bloco G não previsto no cronograma (18–21/11)</td><td>Início do bloco A adiado para 22/11</td></tr>
+        <tr><td>Resultados diferem entre máquinas (até 0,13 p.p.), da ordem dos Δ medidos; na mesma máquina, μ = 0 ≡ FedAvg bit a bit</td><td>Cada máquina roda <b>sementes inteiras</b>; pares FedAvg × FedProx nunca são divididos</td></tr>
+        <tr><td>Nova máquina ~1,45× mais lenta: ~14 min por execução de 100 rodadas</td><td>Bloco A contínuo (~4,5 h por semente); micro-experimento de custo continua no i5-1235U</td></tr>
+        <tr><td>Tempo na GPU (T4) ainda não medido</td><td>Orçamento de execução ainda não confirmado</td></tr>
+      </table>
+
+      <div class="callout blue small" style="margin-top:14px">
+        <b>Estágio atual:</b> protótipo validado e plano experimental confirmado; a pesquisa está na <b>execução da grade principal</b>: bloco A com <b>60 de 100</b> execuções (sementes 0 a 2, sem falhas). Os resultados acima são exploratórios; H1–H4 só serão testadas com os blocos C e D (10 sementes novas).
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>Diego Reis · Augusto Lázaro — XRSC10</span><span>ATV 06 · Segundo acompanhamento</span></div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4 – PRÓXIMOS PASSOS                                     -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="head"><span class="num">4</span><h1>Próximos passos</h1><span class="sub">até a entrega em 15/12</span></div>
+
+  <div class="cols" style="grid-template-columns: 0.95fr 1.05fr;">
+    <div>
+      <h2>Atividades previstas</h2>
+      <ol class="small" style="padding-left:22px;margin:0">
+        <li><b>Concluir o bloco A</b> no F-MNIST: faltam as sementes 3–4, já em execução (previsão: noite de 23/11).</li>
+        <li><b>Kaggle:</b> notebook, teste de sanidade na GPU e tempo de uma execução na T4, para confirmar o orçamento e rodar o CIFAR-10.</li>
+        <li><b>Bloco B</b> (FedAvgM, FedAdam; SCAFFOLD se couber) e escolha de <b>μ*</b> por dataset.</li>
+        <li><b>Blocos C e D</b> com 10 sementes novas (5 a 14).</li>
+        <li><code>microbench.py</code>: custo do termo proximal em CPU de 1 <i>thread</i>, 30 repetições (H4).</li>
+        <li><code>analysis.py</code> (métricas já implementadas): Wilcoxon + Holm, TOST e figuras; escrita de Resultados e Conclusões.</li>
+      </ol>
+
+      <h2 style="margin-top:16px">Resultados esperados</h2>
+      <ul class="small">
+        <li><b>H1:</b> ganho do FedProx cresce com a heterogeneidade; equivalência (±1 p.p.) para α ≥ 1.</li>
+        <li><b>H2:</b> μ intermediário dá o maior ganho; μ = 1 prejudica perto do IID.</li>
+        <li><b>H3:</b> o efeito depende do tipo de heterogeneidade. <b>H4:</b> custo por época &lt; 1,10× o do FedAvg.</li>
+        <li>Piloto, bloco G e bloco A (sementes 0–2) sugerem Δ ≈ 0 com μ ≤ 0,1; o TOST permite afirmar equivalência, e não só “ausência de diferença”.</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2>Cronograma e ajustes</h2>
+      <table class="sched" style="font-size:15px">
+        <tr><th>Atividade</th><th>Previsto</th><th>Situação</th></tr>
+        <tr><td>Levantamento e referencial</td><td>set.–out.</td><td><span class="st ok">concluído</span></td></tr>
+        <tr><td>Ambiente, piloto e sanidade</td><td>11–17 nov.</td><td><span class="st ok">concluído</span></td></tr>
+        <tr><td>Verificação do trabalho local (G)</td><td>—</td><td><span class="st ok">concluído</span></td></tr>
+        <tr class="hl"><td>Blocos A e B + escolha de μ*</td><td>18–24 nov.</td><td><span class="st late">atrasado</span> <span class="xs">A: 60/100 em 23/11</span></td></tr>
+        <tr><td>Blocos C e D</td><td>25 nov.–1 dez.</td><td><span class="st todo">a executar</span></td></tr>
+        <tr><td>Micro-experimento de custo</td><td>25 nov.–8 dez.</td><td><span class="st todo">a executar</span></td></tr>
+        <tr><td>Análise estatística e figuras</td><td>2–8 dez.</td><td><span class="st todo">a executar</span></td></tr>
+        <tr><td>Resultados, conclusões e entrega</td><td>2–15 dez.</td><td><span class="st todo">a executar</span></td></tr>
+      </table>
+
+      <div class="callout" style="margin-top:12px; font-size:15px">
+        <b style="color:var(--red)">Datas mantidas, com contingência já prevista:</b>
+        <ul style="margin-top:4px">
+          <li>dividir os blocos entre o Kaggle e a CPU local, sempre por semente inteira;</li>
+          <li>se o orçamento não couber, reduzir o bloco B para 2 sementes antes de cortar A e D;</li>
+          <li>se o SCAFFOLD não couber no prazo, o bloco B fica com FedAvgM e FedAdam.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>Diego Reis · Augusto Lázaro — XRSC10</span><span>ATV 06 · Segundo acompanhamento</span></div>
+</section>
+
+</body>
+</html>
