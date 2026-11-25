@@ -73,9 +73,13 @@ def main():
     p.add_argument("--per-round", type=int, default=10)
     p.add_argument("--unsorted", action="store_true", help="não ordena os resultados antes de agregar (diagnóstico)")
     p.add_argument("--force", action="store_true")
+    p.add_argument("--out", default="results",
+                   help="pasta dos resultados, relativa a experimentos/ (outra máquina refazendo um FedAvg já existente)")
     a = p.parse_args()
 
-    RESULTS.mkdir(exist_ok=True)
+    global RESULTS
+    RESULTS = HERE / a.out
+    RESULTS.mkdir(parents=True, exist_ok=True)
     key = key_of(a)
     if (RESULTS / f"{key}.json").exists() and not a.force:
         print(f"[skip] {key}")

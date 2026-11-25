@@ -54,9 +54,9 @@ def block(name, dataset, mu_star=0.1):
         return [dict(base, alpha=a, strategy=s, mu=m, seed=sd, rounds=100)
                 for sd in range(5, 15) for a in ALPHAS
                 for s, m in (("fedavg", 0.0), ("fedprox", mu_star))]
-    if name == "B":
+    if name == "B":  # referências; o FedAvg (do bloco A) só roda se faltar na pasta de saída (outra máquina)
         return [dict(base, alpha=a, strategy=s, seed=sd, rounds=100)
-                for sd in range(3) for a in ALPHAS for s in ("fedavgm", "fedadam")]
+                for sd in range(3) for a in ALPHAS for s in ("fedavg", "fedavgm", "fedadam")]
     raise ValueError(name)
 
 
@@ -78,6 +78,9 @@ def main():
     p.add_argument("--shard", default="0/1",
                    help="i/n: executa só a i-ésima de n fatias de sementes (dividir entre máquinas). "
                         "A divisão é por semente, para que FedAvg e FedProx da mesma semente rodem na mesma máquina.")
+    p.add_argument("--out", default="results",
+                   help="pasta dos resultados (relativa a experimentos/). Ex.: bloco B em outra máquina, que "
+                        "precisa refazer o FedAvg das sementes 0-2 sem sobrescrever o do bloco A")
     a = p.parse_args()
     if a.block == "cifar":
         a.dataset = "cifar10"
@@ -88,7 +91,7 @@ def main():
     print(f"shard {i}/{n}: sementes {seeds}, {len(cfgs)} configurações", flush=True)
     for i, c in enumerate(cfgs, 1):
         print(f"=== {i}/{len(cfgs)} {c}", flush=True)
-        r = subprocess.run([sys.executable, str(HERE / "run.py"), *to_args(c)])
+        r = subprocess.run([sys.executable, str(HERE / "run.py"), *to_args(c), "--out", a.out])
         if r.returncode:
             print(f"!!! falhou (código {r.returncode}); seguindo", flush=True)
 

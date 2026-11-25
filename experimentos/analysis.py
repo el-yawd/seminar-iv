@@ -15,6 +15,11 @@ Diferenças pareadas: Δ = FedProx(mu) − FedAvg na mesma semente. Só entram p
 que as duas execuções existem e foram feitas na mesma máquina (o resultado não é
 bit a bit igual entre máquinas; ver docs/registro-vostro.md).
 
+Decisões da Metodologia tomadas com o bloco A:
+  mu*     o mu que maximiza a acurácia média do FedProx no bloco (blocos C e D usam esse valor)
+  H2      descritivo: posto médio dos mu em cada alpha; IC 95 % (bootstrap) de Δ com mu = 1, alpha = 100
+  T       ampliar para 200 rodadas se menos da metade das execuções com alpha <= 0,1 atingir tau
+
 Grava results/<bloco>_resumo.json. Testes de hipótese (Wilcoxon, Holm, TOST) ficam
 para os blocos confirmatórios (C e D).
 """
@@ -43,12 +48,16 @@ def run_metrics(csv, js):
     )
 
 
-def load(dataset, epochs, rounds):
+def load(dataset, epochs, rounds, seeds, strategies=("fedavg", "fedprox")):
+    """Execuções Dirichlet do bloco. O padrão de nome é o mesmo nos blocos A, B e D; o que separa
+    os blocos são as sementes (A e B: 0-4; C e D: 5-14) e as estratégias (B: fedavgm, fedadam)."""
     rows = []
     for js in sorted(R.glob(f"{dataset}_dirichlet_*_E{epochs}_s*_T{rounds}.json")):
         csv = js.with_suffix(".csv")
         if csv.exists():
-            rows.append(run_metrics(csv, js))
+            m = run_metrics(csv, js)
+            if m["seed"] in seeds and m["strategy"] in strategies:
+                rows.append(m)
     return pd.DataFrame(rows)
 
 
@@ -71,9 +80,14 @@ def main():
     p.add_argument("--epochs", type=int, default=2)
     p.add_argument("--rounds", type=int, default=100)
     p.add_argument("--name", default="blocoA")
+    p.add_argument("--seeds", default="0-4", help="intervalo de sementes do bloco (A: 0-4)")
+    p.add_argument("--results", default="results", help="pasta dos resultados (ver --out no grid.py)")
     a = p.parse_args()
+    global R
+    R = Path(__file__).parent / a.results
+    lo, hi = map(int, a.seeds.split("-"))
 
-    df = load(a.dataset, a.epochs, a.rounds)
+    df = load(a.dataset, a.epochs, a.rounds, range(lo, hi + 1))
     if df.empty:
         raise SystemExit("nenhum resultado encontrado")
     ref = df[(df.strategy == "fedavg") & (df.alpha == 100)]
@@ -117,7 +131,49 @@ def main():
     cols = ["alpha", "alg", "n", "acc", "d_acc", "d_acc_min", "d_acc_max", "p10", "d_p10", "instab", "d_instab", "R_tau_hit"]
     print(sm[[c for c in cols if c in sm]].round(2).to_string(index=False))
 
+    # --- decisões da Metodologia que dependem do bloco A ---
+    prox = df[df.strategy == "fedprox"]
+    n_mu = prox.mu.nunique()
+    # só (alpha, semente) com todos os mu, para nenhum mu ganhar por ter mais execuções prontas
+    full = prox.groupby(["alpha", "seed"]).mu.transform("nunique") == n_mu
+    # mu*: o mu que maximiza a acurácia média no bloco A (todos os alpha e sementes)
+    mu_acc = prox[full].groupby("mu").acc.mean().sort_values(ascending=False)
+    mu_star = float(mu_acc.index[0])
+    # H2 (descritivo): posto médio dos mu em cada alpha (1 = maior acurácia), só sementes com todos os mu
+    rk = []
+    for (alpha, seed), g in prox.groupby(["alpha", "seed"]):
+        if g.mu.nunique() == n_mu:
+            rk += [dict(alpha=alpha, seed=seed, mu=m, rank=r)
+                   for m, r in zip(g.mu, g.acc.rank(ascending=False))]
+    rk = pd.DataFrame(rk)
+    h2_ranks = rk.groupby(["alpha", "mu"])["rank"].mean().unstack() if len(rk) else pd.DataFrame()
+    best_by_alpha = {float(al): float(row.idxmin()) for al, row in h2_ranks.iterrows()}
+    s100 = sm[(sm.alpha == 100) & (sm.alg == "mu=1")]
+    ci100 = s100.d_acc_ci95.iloc[0] if len(s100) else [None, None]
+    h2 = dict(best_mu_by_alpha=best_by_alpha,
+              best_in_small_mu=all(m in (0.01, 0.1) for m in best_by_alpha.values()),
+              ci_mu1_alpha100=ci100,
+              ci_mu1_alpha100_below_zero=ci100[1] is not None and ci100[1] < 0)
+    # censura: T sobe para 200 com alpha <= 0,1 se menos da metade das execuções atingir tau
+    low = df[df.alpha <= 0.1]
+    hit_low = float(low.R_tau.notna().mean()) if len(low) else None
+
+    print(f"\nmu* (maior acurácia média no bloco): {mu_star:g}  |  " +
+          "  ".join(f"mu={m:g}: {v:.3f} %" for m, v in mu_acc.items()))
+    if len(h2_ranks):
+        print("H2, posto médio dos mu por alpha (1 = melhor):")
+        print(h2_ranks.round(2).to_string())
+    print(f"H2: melhor mu em {{0,01; 0,1}} em todos os alpha: {h2['best_in_small_mu']};  "
+          f"IC 95% de Δ com mu = 1 e alpha = 100: {ci100} (abaixo de zero: {h2['ci_mu1_alpha100_below_zero']})")
+    if hit_low is not None:
+        print(f"execuções com alpha <= 0,1 que atingem tau: {hit_low:.0%} "
+              f"({'T = 100 mantido' if hit_low >= 0.5 else 'ampliar T para 200'})")
+
     out = dict(dataset=a.dataset, epochs=a.epochs, rounds=a.rounds, tau=tau,
+               mu_star=mu_star, mu_mean_acc={f"{m:g}": v for m, v in mu_acc.items()},
+               h2=h2, h2_mean_rank={f"{al:g}": {f"{m:g}": v for m, v in row.items()}
+                                    for al, row in h2_ranks.iterrows()},
+               tau_hit_frac_alpha_le_0_1=hit_low,
                runs=df.drop(columns="curve").to_dict("records"),
                pairs=pr.to_dict("records"), summary=sm.to_dict("records"))
     (R / f"{a.name}_resumo.json").write_text(json.dumps(out, indent=2, default=lambda o: None if pd.isna(o) else o))

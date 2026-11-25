@@ -197,3 +197,42 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
   `tab:status`, parágrafo de situação, próximos passos) e recompilado sem avisos.
   Slides mantidos como apresentados (sementes 0–2, 60/100). Commits e push de todo o
   trabalho do dia: resultados, artigo, slides e este registro.
+- **Push.** A primeira tentativa falhou: a conta `augustolr06` não tinha escrita em
+  `el-yawd/seminar-iv`. Depois que o Diego deu a permissão, o push de `main` foi feito
+  (`9930a6d..d9a4e72`, 4 commits). Esta entrada fica para o próximo commit.
+
+## 24/11, noite: conclusão do bloco A e passagem para outra máquina
+
+- **20h11: bloco A retomado** (`setsid nohup systemd-inhibit ... grid.py --block A >> ~/blocoA.log`,
+  PID 15925), sem limite de horário: o usuário deixa a máquina ligada o tempo necessário.
+  Faltavam 26 execuções (~14 min cada); previsão de término por volta das 2h30 de 25/11.
+- **`analysis.py`** passa a tomar as decisões da Metodologia que dependem do bloco A:
+  μ* (o μ com maior acurácia média do FedProx, só com (α, semente) que têm os três μ, para
+  nenhum μ ganhar por ter mais execuções prontas), H2 descritivo (posto médio dos μ em cada α
+  e IC de Δ com μ = 1 e α = 100) e a regra de censura (T = 200 se menos da metade das
+  execuções com α ≤ 0,1 atingir τ). Também passa a filtrar por sementes (`--seeds`, padrão
+  0-4) e estratégias: os blocos A e D têm o mesmo padrão de nome de arquivo, e sem o filtro
+  o bloco D entraria no resumo do A. Prévia com 74 execuções: μ* = 0,01, só 0,016 p.p. acima
+  de μ = 0,1 (empate prático).
+- **`experimentos/README.md`** (novo): situação dos blocos, regra de sementes inteiras por
+  máquina, ambiente, teste de sanidade, comandos e o que falta implementar. É o ponto de
+  partida para continuar em outra máquina.
+- Encadear o bloco B depois do A foi bloqueado pelo sistema de permissões (não tinha sido
+  pedido); ficou como pergunta ao usuário.
+- **Decisão do usuário e do Diego: o bloco B roda na máquina do Diego e o C nesta.** Como o
+  B é comparado ao FedAvg das sementes 0–2, que rodou aqui, a outra máquina refaz esse FedAvg.
+  Para isso: `run.py` e `grid.py` ganham `--out` (pasta dos resultados; padrão `results`),
+  `analysis.py` ganha `--results`, e o bloco B do `grid.py` passa a incluir o FedAvg, que é
+  pulado quando já existe na pasta de saída. Na máquina do Diego:
+  `grid.py --block B --out results/blocoB` (45 execuções). O padrão não muda nada aqui.
+  O `run.py` foi trocado com o bloco A rodando: testado antes numa cópia (o caminho de
+  `[skip]` e uma pasta alternativa), depois trocado de uma vez com `mv`. As execuções
+  seguintes do A só ganham o campo `out` em `args` no JSON.
+- Partições do bloco C verificadas para as sementes 5–14: a patológica dá 600 amostras e
+  2 classes por cliente; a de quantidade dá de 5 a 5051 amostras e de 4 a 10 classes por
+  cliente. Todas as amostras são usadas uma vez e nenhum cliente fica sem teste local.
+- **Bloco C encadeado** (`encadeia_C.sh` no *scratchpad*, `setsid nohup`): espera o PID 15925
+  sair; se houver 100 execuções do A e nenhuma falha, roda o `analysis.py` (saída em
+  `~/blocoA_analise.txt`), lê o `mu_star` de `blocoA_resumo.json` e inicia
+  `grid.py --block C --mu-star <mu*>` com `systemd-inhibit` (log em `~/blocoC.log`). Se o A
+  ficar incompleto, o C não é iniciado. O bloco D ainda não foi atribuído a nenhuma máquina.
