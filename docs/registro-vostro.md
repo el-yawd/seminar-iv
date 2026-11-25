@@ -297,3 +297,26 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
     nos dois tipos de heterogeneidade.
 - Artigo (C3, `tab:status`, situação, próximos passos) e README atualizados: C concluído,
   análise pendente.
+- **Bloco B recebido do Diego** (`893db42`, 8h17 de 25/11): 30 execuções em `results/`, mas
+  sem o FedAvg das sementes 0–2 refeito na máquina dele e sem `env.host` nos JSON, o que
+  indica código anterior a 23/11. O meu commit do bloco C foi rebaseado sobre o dele
+  (`--autostash`, para preservar as remoções do usuário, que continuam fora dos commits) e
+  enviado (`99de7c5`). A comparação do B com o FedAvg entre máquinas ficou como pergunta
+  para o Diego.
+- **Bloco D iniciado às 17h41 de 25/11 nesta máquina**, a pedido do usuário:
+  `blocoD.sh` (*scratchpad*) chama `grid.py --block D --mu-star 0.01` até 3 vezes. São 100
+  execuções nas sementes 5–14, com log em `~/blocoD.log` e previsão de ~22 h, até por volta
+  das 16h de 26/11.
+- **Bloco B, opção 2** (decisão do usuário e do Diego): o Diego refaz na máquina dele o FedAvg
+  das sementes 0–2 (15 execuções) com `--out results/blocoB`. Para adiantar, as 30 execuções
+  dele foram movidas aqui para `results/blocoB/` (`git mv`), e o `grid.py --block B --out
+  results/blocoB` pula essas 30. O código de 18/11 que ele usou difere do atual só nos
+  metadados (`host`, `cpu_model`), no `--out` e no índice `int64` da patológica, sem efeito no
+  cálculo da Dirichlet, então as 30 continuam válidas. O pareamento do B deve ser feito por
+  pasta, porque as 30 não têm `env.host`.
+- **Bloco D: 3 falhas por falta de memória** entre 17h41 e ~18h10
+  (`ray.exceptions.OutOfMemoryError`; o Ray mata atores acima de 95 % da RAM). Cada execução
+  ocupa ~6 GB (8 atores de ~670 MB, mais o processo principal) dos 13 GiB da máquina, e havia
+  outros programas abertos. As três (semente 5: α = 0,05 com os dois algoritmos e α = 0,1 com
+  o FedAvg) não gravaram JSON e serão refeitas na 2ª tentativa do `blocoD.sh`. Desde ~18h10,
+  sem falhas.

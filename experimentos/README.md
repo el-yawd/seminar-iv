@@ -12,9 +12,9 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | piloto | F-MNIST, semente 0, T = 20, sanidade μ = 0 | 10 | concluído | i5-1235U |
 | G | gate da reformulação α × E (negativo, E = 2 mantido) | 18 | concluído | i5-1235U |
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
-| B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 (+15 FedAvg) | a executar | máquina do Diego, em `results/blocoB/` |
+| B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 (+15 FedAvg) | 30 prontas; falta o FedAvg | máquina do Diego, em `results/blocoB/` |
 | C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído (análise pendente) | `vostro-15-3515` |
-| D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | a executar | a definir (sementes inteiras por máquina) |
+| D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | em execução desde 25/11 | `vostro-15-3515` |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
 | microbench | custo do termo proximal, CPU de 1 *thread*, 30 repetições (H4) | — | `microbench.py` ainda não existe | i5-1235U |
 
@@ -47,6 +47,13 @@ numa pasta separada para não sobrescrever o do bloco A:
 ```
 
 Na pasta padrão (`results/`), o mesmo comando pula o FedAvg, que já existe, e roda só as 30 do B.
+
+Situação (25/11): as 30 execuções de FedAvgM e FedAdam já estão em `results/blocoB/`, então o
+comando acima pula essas 30 e roda só as 15 do FedAvg. Elas foram feitas com o código de 18/11, que
+não grava `env.host` nem `env.cpu_model`. As mudanças seguintes no código foram só nos metadados,
+no `--out` e no tipo dos índices da partição patológica, sem efeito no cálculo da Dirichlet
+(verificado bit a bit). Na análise do B, o pareamento deve ser feito dentro de `results/blocoB/`,
+onde tudo vem da mesma máquina, e não pelo campo `host`.
 Os blocos C e D usam sementes novas (5–14) e podem rodar em qualquer máquina, desde que cada
 semente fique inteira em uma só.
 
