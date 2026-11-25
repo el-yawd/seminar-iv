@@ -259,3 +259,21 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
 - Artigo: nova Seção 5.8 (bloco A, com `tab:blocoA`, as médias de 5 sementes e as três
   decisões). Também atualizados `tab:cenarios` (C1–C3), o parágrafo de situação, `tab:status`
   (25/11) e os próximos passos. Recompilado: 23 páginas, sem *overfull*. README com o μ\*.
+- **Bloco C, primeira passada (1h56–6h06): 19/40, com 21 falhas.**
+  - **20 falhas eram um bug na partição patológica.** Todas falharam na rodada 1 com
+    `IndexError: arrays used as indices must be of integer (or boolean) type`. Na patológica,
+    todos os clientes têm o mesmo tamanho (600 amostras, 480 de treino), e
+    `np.array(tr, dtype=object)` no `run.py` vira uma matriz 2-D de objetos. A linha que o
+    cliente lê tem dtype `object` e não serve de índice. Na Dirichlet e na de quantidade, os
+    tamanhos diferem e isso não acontece.
+  - **Correção:** `client.py` converte os índices para `int64`. Testado com 3 rodadas da
+    patológica (roda) e de uma configuração do bloco A (α = 0,1, μ = 0,01, semente 4), que deu
+    acurácia e perda iguais bit a bit às 3 primeiras rodadas do CSV gravado, ou seja, os
+    resultados existentes não mudam. A verificação das partições feita ontem só conferiu os
+    índices, e não a passagem pelo `np.savez`, por isso o bug não apareceu antes.
+  - **1 falha foi de rede.** A execução da quantidade com μ = 0,01 e semente 10 caiu na
+    rodada 50: o cabo caiu de novo às 4h22 (link down/up três vezes em 1 min). Tentei fazer o
+    Ray usar só 127.0.0.1 (`init_args._node_ip_address`), mas o Ray troca o endereço local
+    pelo IP da rede de propósito (`resolve_ip_for_localhost`). Desfeito.
+  - **Mitigação:** `blocoC_retoma.sh` (*scratchpad*) chama `grid.py --block C --mu-star 0.01`
+    até 3 vezes, enquanto faltar alguma das 40. Relançado às 6h09 com 21 execuções a fazer.

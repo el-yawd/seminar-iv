@@ -65,7 +65,9 @@ class FLClient(NumPyClient):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         name, pid = config["dataset"], int(config["pid"])
         x, y = _dataset(name)
-        idx = _partitions(config["parts"])[pid]
+        # int64 explícito: se todos os clientes têm o mesmo tamanho (partição patológica), o np.savez
+        # grava uma matriz 2-D de objetos, e a linha sai com dtype object, que não serve de índice
+        idx = np.asarray(_partitions(config["parts"])[pid], dtype=np.int64)
         ds = torch.utils.data.TensorDataset(torch.from_numpy(np.ascontiguousarray(x[idx])),
                                             torch.from_numpy(y[idx]))
         g = torch.Generator().manual_seed(int(config["seed"]) * 1_000_003
