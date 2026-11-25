@@ -13,7 +13,7 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | G | gate da reformulação α × E (negativo, E = 2 mantido) | 18 | concluído | i5-1235U |
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
 | B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 (+15 FedAvg) | a executar | máquina do Diego, em `results/blocoB/` |
-| C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | em execução desde 25/11 | `vostro-15-3515` |
+| C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído (análise pendente) | `vostro-15-3515` |
 | D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | a executar | a definir (sementes inteiras por máquina) |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
 | microbench | custo do termo proximal, CPU de 1 *thread*, 30 repetições (H4) | — | `microbench.py` ainda não existe | i5-1235U |

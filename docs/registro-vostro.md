@@ -277,3 +277,23 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
     pelo IP da rede de propósito (`resolve_ip_for_localhost`). Desfeito.
   - **Mitigação:** `blocoC_retoma.sh` (*scratchpad*) chama `grid.py --block C --mu-star 0.01`
     até 3 vezes, enquanto faltar alguma das 40. Relançado às 6h09 com 21 execuções a fazer.
+- **Bloco C concluído às 11h14 de 25/11: 40/40.** A segunda tentativa começou às 10h59 com
+  39/40. Faltava a execução patológica com FedProx e semente 9, que caiu na rodada 78 por
+  outra queda do cabo (link down às 7h46 e várias vezes entre 8h07 e 8h24). Todas as 40 têm
+  100 rodadas com 10 clientes e `host` = `vostro-15-3515`.
+- **Verificação das execuções feitas durante as quedas de rede** (pedido do usuário): uma
+  execução que termina recebeu todos os clientes em todas as rodadas, porque o `aggregate_fit`
+  aborta se houver qualquer falha. Os 123 CSVs completos têm 10 clientes por rodada. Refeitas
+  3 rodadas de duas execuções do A que rodaram com o cabo desconectado (α = 0,1, μ = 0,1, e
+  α = 1, FedAvg, semente 4): acurácia, perda e clientes iguais bit a bit. Primeiro a
+  comparação acusou diferença, mas era o NaN da coluna `pids` na rodada 0 (NaN ≠ NaN); com
+  `DataFrame.equals`, iguais.
+- **Prévia descritiva do bloco C** (não está no artigo; o `analysis.py` ainda não lê o C):
+  - patológica: FedAvg 72,34 %, FedProx 72,34 %, Δ médio 0,00 p.p., de −0,03 a +0,04
+    (4 de 10 sementes positivas);
+  - quantidade: FedAvg 86,62 %, FedProx 86,59 %, Δ médio −0,03 p.p., de −0,06 a 0,00
+    (0 de 10 positivas).
+  - Com μ* = 0,01, como esperado pelo bloco A, o FedProx fica praticamente igual ao FedAvg
+    nos dois tipos de heterogeneidade.
+- Artigo (C3, `tab:status`, situação, próximos passos) e README atualizados: C concluído,
+  análise pendente.

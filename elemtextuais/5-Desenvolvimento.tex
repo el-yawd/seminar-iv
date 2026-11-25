@@ -167,7 +167,7 @@ A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que el
         \midrule
         C1 & Varredura de nível ($\alpha$) & Dirichlet de rótulos com $\alpha$ de 0,05 (cada cliente vê poucas classes) a 100 (praticamente IID). Localiza o limiar a partir do qual o FedProx passa a compensar. & H1 & bloco A concluído (F-MNIST; Seção~\ref{sec:blocoA}) \\
         C2 & Sensibilidade a $\mu$ & Cruza os três valores de $\mu$ com todos os $\alpha$. Separa ``o FedProx não funciona'' de ``$\mu$ mal escolhido''. & H2 & bloco A concluído (F-MNIST); $\mu^* = 0{,}01$ \\
-        C3 & Tipo de heterogeneidade & Partição patológica ($k = 2$ classes) e desvio só de quantidade, com rótulos IID. & H3 & bloco C em execução (F-MNIST) \\
+        C3 & Tipo de heterogeneidade & Partição patológica ($k = 2$ classes) e desvio só de quantidade, com rótulos IID. & H3 & bloco C concluído (F-MNIST; análise pendente) \\
         C4 & Custo local em CPU restrita & Tempo por época e memória de pico de FedAvg e FedProx em 1 thread de CPU. & H4 & a executar \\
         C5 & \textit{Stragglers} (opcional) & Parte dos clientes executa só uma fração das épocas locais \citep{li2020fedprox}. & extensão & -- \\
         \bottomrule
@@ -371,7 +371,7 @@ A Tabela~\ref{tab:ajustes} reúne as diferenças entre o que foi planejado na Se
 
 \subsection{Situação em relação ao cronograma}
 
-Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores; o OE2 foi atingido com o protótipo e o teste de sanidade, faltando apenas os algoritmos de referência no bloco B; o OE3 foi atendido para o Fashion-MNIST, faltando gerar as partições do CIFAR-10 e das sementes confirmatórias, o que é automático a partir da semente; e os OE4 e OE5 foram iniciados com o piloto, que já registra todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. As atividades previstas até 17 de novembro foram concluídas, com o piloto executado em CPU local em vez de GPU. O bloco de verificação do trabalho local (Seção~\ref{sec:gate}), não previsto no cronograma, consumiu de 18 a 21 de novembro e manteve o desenho original. O bloco A começou em 22 de novembro, em uma segunda máquina (Tabela~\ref{tab:ajustes}), e foi concluído no Fashion-MNIST em 25 de novembro, com cerca de 14~min por execução (Seção~\ref{sec:blocoA}). No mesmo dia, essa máquina iniciou o bloco C. O bloco B passou para a outra máquina do grupo, que refaz o FedAvg das sementes 0 a 2, porque só se pareiam execuções da mesma máquina. A principal pendência herdada pela etapa seguinte continua sendo confirmar o tempo por execução na T4.
+Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores; o OE2 foi atingido com o protótipo e o teste de sanidade, faltando apenas os algoritmos de referência no bloco B; o OE3 foi atendido para o Fashion-MNIST, faltando gerar as partições do CIFAR-10 e das sementes confirmatórias, o que é automático a partir da semente; e os OE4 e OE5 foram iniciados com o piloto, que já registra todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. As atividades previstas até 17 de novembro foram concluídas, com o piloto executado em CPU local em vez de GPU. O bloco de verificação do trabalho local (Seção~\ref{sec:gate}), não previsto no cronograma, consumiu de 18 a 21 de novembro e manteve o desenho original. O bloco A começou em 22 de novembro, em uma segunda máquina (Tabela~\ref{tab:ajustes}), e foi concluído no Fashion-MNIST em 25 de novembro, com cerca de 14~min por execução (Seção~\ref{sec:blocoA}). No mesmo dia, essa máquina executou o bloco C (40 execuções), cuja análise ainda não foi feita. O bloco B passou para a outra máquina do grupo, que refaz o FedAvg das sementes 0 a 2, porque só se pareiam execuções da mesma máquina. A principal pendência herdada pela etapa seguinte continua sendo confirmar o tempo por execução na T4.
 
 \begin{table}[ht]
     \centering\small
@@ -386,7 +386,7 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
         Verificação do trabalho local (bloco G) & -- & concluído; $E = 2$ mantido \\
         Reprodutibilidade em segunda máquina & -- & concluído \\
         Blocos A e B + escolha de $\mu^*$ & 18--24 nov. & atrasado; A concluído (F-MNIST), $\mu^* = 0{,}01$; B a executar \\
-        Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & C em execução (F-MNIST); D a executar \\
+        Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & C concluído (F-MNIST); D a executar \\
         Micro-experimento de custo em CPU & 25 nov.--8 dez. & a executar \\
         Análise estatística e figuras & 2--8 dez. & a executar \\
         Resultados, conclusões e entrega & 2--15 dez. & a executar \\
@@ -394,4 +394,4 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
     \end{tabular}
 \end{table}
 
-Os próximos passos são, nesta ordem: (i) concluir os blocos B e C no Fashion-MNIST, um em cada máquina; (ii) executar o bloco D, com cada semente inteira em uma só máquina; (iii) medir o tempo por execução na T4 (\texttt{experimentos/kaggle.ipynb}), executar o bloco A no CIFAR-10 e escolher o $\mu^*$ desse dataset; (iv) integrar o SCAFFOLD ao bloco B, se couber no prazo; e (v) implementar \texttt{microbench.py} e completar \texttt{analysis.py}, que já calcula as métricas, as diferenças pareadas e as decisões do bloco A, com a leitura dos blocos B, C e D e os testes confirmatórios (Wilcoxon com correção de Holm e TOST).
+Os próximos passos são, nesta ordem: (i) concluir o bloco B no Fashion-MNIST, na outra máquina; (ii) executar o bloco D, com cada semente inteira em uma só máquina; (iii) medir o tempo por execução na T4 (\texttt{experimentos/kaggle.ipynb}), executar o bloco A no CIFAR-10 e escolher o $\mu^*$ desse dataset; (iv) integrar o SCAFFOLD ao bloco B, se couber no prazo; e (v) implementar \texttt{microbench.py} e completar \texttt{analysis.py}, que já calcula as métricas, as diferenças pareadas e as decisões do bloco A, com a leitura dos blocos B, C e D e os testes confirmatórios (Wilcoxon com correção de Holm e TOST).
