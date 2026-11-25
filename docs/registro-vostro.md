@@ -236,3 +236,26 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
   `~/blocoA_analise.txt`), lê o `mu_star` de `blocoA_resumo.json` e inicia
   `grid.py --block C --mu-star <mu*>` com `systemd-inhibit` (log em `~/blocoC.log`). Se o A
   ficar incompleto, o C não é iniciado. O bloco D ainda não foi atribuído a nenhuma máquina.
+- **Falha e conclusão do bloco A.** Uma execução falhou na rodada 40 (α = 0,1, μ = 0,01,
+  semente 4, por volta das 22h33): o link do cabo de rede (`enp2s0`) caiu e só voltou à
+  0h13, e o Ray, que usa o IP da rede (10.0.1.7) para falar com os próprios atores, perdeu
+  os 10 clientes da rodada ("Network is unreachable"). O `grid.py` registrou a falha e
+  seguiu. À 1h37, com 99 execuções e 1 falha, o encadeamento cumpriu a checagem e **não**
+  iniciou o C. A execução foi refeita (`encadeia_C2.sh`: `grid.py --block A`, que só
+  roda a que falta, e depois as mesmas checagens) e terminou à 1h56. **Bloco A: 100/100.**
+  O CSV parcial foi sobrescrito, porque o `RoundWriter` abre o arquivo com `"w"`.
+- **Decisões (`blocoA_resumo.json`, 100 execuções, τ = 76,20 %):**
+  - **μ\* = 0,01**: 78,994 %, contra 78,961 % com μ = 0,1 e 78,355 % com μ = 1. A margem é
+    de 0,03 p.p., mas a regra foi aplicada como fixada. Como μ = 0,01 teve |Δ| ≤ 0,02 p.p.
+    em todo α, os blocos C e D comparam o FedAvg com um FedProx sem efeito mensurável no
+    bloco A, e H1 passa a depender sobretudo do TOST.
+  - **H2, em parte**: o IC de Δ com μ = 1 e α = 100 é [−0,79; −0,66] p.p. (abaixo de zero).
+    O melhor posto médio fica em {0,01; 0,1} em 4 de 5 α. Com α = 0,05, μ = 1 tem posto 1,8,
+    contra 2,0 e 2,2, mas as médias dos três μ diferem em no máximo 0,18 p.p.
+  - **T = 100 mantido**: 80 % das execuções com α ≤ 0,1 atingem τ (3/5 sementes com
+    α = 0,05; 5/5 com α = 0,1).
+- **Bloco C iniciado à 1h56 de 25/11** com `--mu-star 0.01` (PID do `grid.py` 154365; log em
+  `~/blocoC.log`). São 40 execuções, previsão de término por volta das 11h30.
+- Artigo: nova Seção 5.8 (bloco A, com `tab:blocoA`, as médias de 5 sementes e as três
+  decisões). Também atualizados `tab:cenarios` (C1–C3), o parágrafo de situação, `tab:status`
+  (25/11) e os próximos passos. Recompilado: 23 páginas, sem *overfull*. README com o μ\*.

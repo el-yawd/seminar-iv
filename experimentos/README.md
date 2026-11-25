@@ -13,13 +13,14 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | G | gate da reformulação α × E (negativo, E = 2 mantido) | 18 | concluído | i5-1235U |
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
 | B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 (+15 FedAvg) | a executar | máquina do Diego, em `results/blocoB/` |
-| C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | em execução | `vostro-15-3515` |
+| C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | em execução desde 25/11 | `vostro-15-3515` |
 | D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | a executar | a definir (sementes inteiras por máquina) |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
 | microbench | custo do termo proximal, CPU de 1 *thread*, 30 repetições (H4) | — | `microbench.py` ainda não existe | i5-1235U |
 
-**μ\* do F-MNIST = MU_STAR** (regra da Metodologia: o μ com maior acurácia média do FedProx
-no bloco A). Ver `results/blocoA_resumo.json` (`mu_star`, `mu_mean_acc`).
+**μ\* do F-MNIST = 0.01** (regra da Metodologia: o μ com maior acurácia média do FedProx
+no bloco A). Foi 78,99 %, contra 78,96 % com μ = 0,1 e 78,35 % com μ = 1: empate prático com 0,1,
+mas a regra foi aplicada como definida. Ver `results/blocoA_resumo.json` (`mu_star`, `mu_mean_acc`).
 
 Os blocos `A2`, `D2` e `cifar` do `grid.py` são da reformulação descartada (`docs/plano-reformulacao.md`)
 e não devem ser usados.
@@ -75,14 +76,14 @@ cd experimentos
 ```bash
 cd experimentos
 ../.venv/bin/python grid.py --block A                          # retomável: pula o que já tem JSON
-../.venv/bin/python grid.py --block D --mu-star MU_STAR         # blocos C e D usam o mu*
-../.venv/bin/python grid.py --block D --mu-star MU_STAR --shard 0/2   # sementes 5, 7, 9, 11, 13
+../.venv/bin/python grid.py --block D --mu-star 0.01         # blocos C e D usam o mu*
+../.venv/bin/python grid.py --block D --mu-star 0.01 --shard 0/2   # sementes 5, 7, 9, 11, 13
 ../.venv/bin/python grid.py --block A --dataset cifar10        # CIFAR-10
 ../.venv/bin/python run.py --help                              # uma execução isolada
 ```
 
 Execuções longas: rode desacoplado do terminal e sem suspender a máquina, por exemplo
-`setsid nohup systemd-inhibit --what=sleep:idle ../.venv/bin/python grid.py --block D --mu-star MU_STAR >> ~/blocoD.log 2>&1 &`.
+`setsid nohup systemd-inhibit --what=sleep:idle ../.venv/bin/python grid.py --block D --mu-star 0.01 >> ~/blocoD.log 2>&1 &`.
 Uma execução interrompida não grava o JSON e é refeita na próxima chamada.
 
 Tempo por execução (F-MNIST, T = 100, E = 2): ~14 min no Ryzen 7 3700U; o i5-1235U é ~1,45×
