@@ -1,0 +1,32 @@
+{
+  "key": "fmnist_dirichlet_a0.05_fedadam_E2_s0_T100",
+  "args": {
+    "dataset": "fmnist",
+    "partition": "dirichlet",
+    "alpha": 0.05,
+    "strategy": "fedadam",
+    "mu": 0.0,
+    "seed": 0,
+    "rounds": 100,
+    "epochs": 2,
+    "lr": 0.01,
+    "batch": 32,
+    "clients": 100,
+    "per_round": 10,
+    "unsorted": false,
+    "force": false
+  },
+  "n_params": 184586,
+  "partition_tries": 930,
+  "client_size_min": 5,
+  "client_size_max": 3163,
+  "local_acc_std": 0.15325902177775136,
+  "local_acc_p10": 0.599375,
+  "wall_time_s": 898.8229552969999,
+  "env": {
+    "python": "3.12.16",
+    "torch": "2.15.0+cpu",
+    "cpu": "x86_64",
+    "cuda": false
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "key": "fmnist_dirichlet_a100_fedavgm_E2_s1_T100",
+  "args": {
+    "dataset": "fmnist",
+    "partition": "dirichlet",
+    "alpha": 100.0,
+    "strategy": "fedavgm",
+    "mu": 0.0,
+    "seed": 1,
+    "rounds": 100,
+    "epochs": 2,
+    "lr": 0.01,
+    "batch": 32,
+    "clients": 100,
+    "per_round": 10,
+    "unsorted": false,
+    "force": false
+  },
+  "n_params": 184586,
+  "partition_tries": 1,
+  "client_size_min": 532,
+  "client_size_max": 672,
+  "local_acc_std": 0.02528912697112297,
+  "local_acc_p10": 0.8737936604078337,
+  "wall_time_s": 729.796797224999,
+  "env": {
+    "python": "3.12.16",
+    "torch": "2.15.0+cpu",
+    "cpu": "x86_64",
+    "cuda": false
+  }
+}
