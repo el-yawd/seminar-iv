@@ -1,0 +1,37 @@
+{
+  "key": "fmnist_dirichlet_a100_fedprox_mu0.01_E2_s13_T100",
+  "args": {
+    "dataset": "fmnist",
+    "partition": "dirichlet",
+    "alpha": 100.0,
+    "strategy": "fedprox",
+    "mu": 0.01,
+    "seed": 13,
+    "rounds": 100,
+    "epochs": 2,
+    "lr": 0.01,
+    "batch": 32,
+    "clients": 100,
+    "per_round": 10,
+    "unsorted": false,
+    "force": false,
+    "out": "results"
+  },
+  "n_params": 184586,
+  "partition_tries": 1,
+  "client_size_min": 507,
+  "client_size_max": 701,
+  "local_acc_std": 0.032299968493582604,
+  "local_acc_p10": 0.8098416503690619,
+  "wall_time_s": 701.2647152249992,
+  "env": {
+    "python": "3.13.7",
+    "torch": "2.15.0+cpu",
+    "cpu": "desconhecido",
+    "cuda": false,
+    "cpu_model": "AMD Ryzen 7 3700U with Radeon Vega Mobile Gfx",
+    "n_cpus": 8,
+    "host": "vostro-15-3515",
+    "gpu": null
+  }
+}

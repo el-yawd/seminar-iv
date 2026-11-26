@@ -14,7 +14,7 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
 | B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 + 15 FedAvg | concluído e analisado (`analysis_bc.py`) | i5-1235U (`melchior`), em `results/blocoB/` |
 | C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído e analisado (`analysis_bc.py`): equivalência nos dois tipos | `vostro-15-3515` |
-| D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | em execução desde 25/11 | `vostro-15-3515` |
+| D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | concluído em 26/11 (análise pendente) | `vostro-15-3515` |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
 | microbench | custo do termo proximal, CPU de 1 *thread*, 30 repetições (H4) | — | `microbench.py` ainda não existe | i5-1235U |
 

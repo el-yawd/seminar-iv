@@ -1,0 +1,37 @@
+{
+  "key": "fmnist_dirichlet_a1_fedavg_E2_s5_T100",
+  "args": {
+    "dataset": "fmnist",
+    "partition": "dirichlet",
+    "alpha": 1.0,
+    "strategy": "fedavg",
+    "mu": 0.0,
+    "seed": 5,
+    "rounds": 100,
+    "epochs": 2,
+    "lr": 0.01,
+    "batch": 32,
+    "clients": 100,
+    "per_round": 10,
+    "unsorted": false,
+    "force": false,
+    "out": "results"
+  },
+  "n_params": 184586,
+  "partition_tries": 1,
+  "client_size_min": 154,
+  "client_size_max": 1166,
+  "local_acc_std": 0.0597224730364042,
+  "local_acc_p10": 0.782063284029208,
+  "wall_time_s": 757.3385182759957,
+  "env": {
+    "python": "3.13.7",
+    "torch": "2.15.0+cpu",
+    "cpu": "desconhecido",
+    "cuda": false,
+    "cpu_model": "AMD Ryzen 7 3700U with Radeon Vega Mobile Gfx",
+    "n_cpus": 8,
+    "host": "vostro-15-3515",
+    "gpu": null
+  }
+}

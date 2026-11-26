@@ -320,3 +320,37 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
   outros programas abertos. As três (semente 5: α = 0,05 com os dois algoritmos e α = 0,1 com
   o FedAvg) não gravaram JSON e serão refeitas na 2ª tentativa do `blocoD.sh`. Desde ~18h10,
   sem falhas.
+- **Bloco D: 4ª falha por falta de memória** por volta das 11h de 26/11 (FedAvg, α = 1,
+  semente 13, rodada 35), com ~1 GB livre por causa de VS Code, navegador, Slack e Claude
+  Desktop abertos. O usuário fechou os programas (a memória disponível voltou a ~5,9 GB) e
+  não houve outras falhas. O processo que esperava o fim do bloco foi encerrado pelo Claude
+  Code nessa hora, também por falta de memória, e foi reiniciado a pedido do usuário; o
+  `blocoD.sh` não foi afetado.
+
+## 26/11 — bloco D concluído (100/100); integração dos commits do Diego
+
+- **Bloco D concluído às 14h47 de 26/11**: 96 execuções na 1ª tentativa e as 4 que
+  falharam por memória na 2ª (13h52–14h47). As 100 foram conferidas: todas com JSON e CSV,
+  100 rodadas, 10 clientes por rodada e `env.host = vostro-15-3515`. Média de 12,4 min por
+  execução.
+- **Prévia descritiva** (FedProx μ = 0,01 − FedAvg na mesma semente, sementes 5–14; IC por
+  *bootstrap*; ainda não é o teste confirmatório de H1):
+
+  | α | FedAvg (%) | FedProx (%) | Δ (p.p.) | IC 95 % | Δ P10 (p.p.) | sementes com Δ > 0 |
+  |---|---:|---:|---:|---|---:|---:|
+  | 0,05 | 70,07 | 70,09 | +0,02 | [−0,01; +0,06] | +0,60 | 7/10 |
+  | 0,1 | 73,00 | 72,99 | −0,01 | [−0,03; +0,02] | −0,15 | 5/10 |
+  | 0,5 | 81,31 | 81,31 | 0,00 | [−0,01; +0,02] | +0,09 | 4/10 |
+  | 1 | 83,15 | 83,14 | −0,01 | [−0,02; +0,01] | −0,11 | 3/10 |
+  | 100 | 84,34 | 84,33 | −0,01 | [−0,03; 0,00] | −0,16 | 4/10 |
+
+  Como no bloco A, com μ* = 0,01 o FedProx fica a menos de 0,1 p.p. do FedAvg em todos os α,
+  muito dentro da margem de equivalência de 1 p.p.
+- **Commits do Diego integrados** (`83d9008`, `e2a4d88`, `faf512c`, de 25/11 à noite):
+  FedAvg das sementes 0–2 refeito no i5 em `results/blocoB/`, `analysis_bc.py` (blocos B e
+  C), seção Proposta e segunda versão do Desenvolvimento. Como ele reescreveu o
+  Desenvolvimento, a minha edição local do status do D foi descartada e refeita sobre a
+  versão dele (avanço rápido, sem conflito).
+- Artigo atualizado: resumo da seção, C1, tempo do bloco D, linha "Memória no bloco D" dos
+  ajustes (quatro falhas; bloco completo), OE4, `tab:status` (26/11; "D concluído, análise
+  pendente") e próximos passos. Compila com 29 páginas, sem *overfull*. README: D concluído.
