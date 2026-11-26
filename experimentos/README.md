@@ -12,7 +12,7 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | piloto | F-MNIST, semente 0, T = 20, sanidade μ = 0 | 10 | concluído | i5-1235U |
 | G | gate da reformulação α × E (negativo, E = 2 mantido) | 18 | concluído | i5-1235U |
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
-| B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 (+15 FedAvg) | 30 prontas; falta o FedAvg | máquina do Diego, em `results/blocoB/` |
+| B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 + 15 FedAvg | concluído (análise pendente) | i5-1235U (`melchior`), em `results/blocoB/` |
 | C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído (análise pendente) | `vostro-15-3515` |
 | D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | em execução desde 25/11 | `vostro-15-3515` |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
@@ -48,12 +48,13 @@ numa pasta separada para não sobrescrever o do bloco A:
 
 Na pasta padrão (`results/`), o mesmo comando pula o FedAvg, que já existe, e roda só as 30 do B.
 
-Situação (25/11): as 30 execuções de FedAvgM e FedAdam já estão em `results/blocoB/`, então o
-comando acima pula essas 30 e roda só as 15 do FedAvg. Elas foram feitas com o código de 18/11, que
-não grava `env.host` nem `env.cpu_model`. As mudanças seguintes no código foram só nos metadados,
-no `--out` e no tipo dos índices da partição patológica, sem efeito no cálculo da Dirichlet
-(verificado bit a bit). Na análise do B, o pareamento deve ser feito dentro de `results/blocoB/`,
-onde tudo vem da mesma máquina, e não pelo campo `host`.
+Feito em 25/11 no i5-1235U (`melchior`): as 45 execuções estão em `results/blocoB/`. As 30 de
+FedAvgM e FedAdam foram feitas com o código de 18/11, que não grava `env.host` nem `env.cpu_model`;
+as mudanças seguintes no código foram só nos metadados, no `--out` e no tipo dos índices da partição
+patológica, sem efeito no cálculo da Dirichlet (uma delas, refeita com o código atual, reproduziu a
+original bit a bit). Na análise do B, o pareamento é feito dentro de `results/blocoB/`, onde tudo vem
+da mesma máquina: o `analysis_bc.py` atribui essas 30 ao `melchior` (`--b-host-missing`). O FedAvg
+refeito no i5 ficou a até 0,01 p.p. do bloco A na `vostro-15-3515` (média das 5 últimas rodadas, por α).
 Os blocos C e D usam sementes novas (5–14) e podem rodar em qualquer máquina, desde que cada
 semente fique inteira em uma só.
 

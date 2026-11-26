@@ -1,0 +1,37 @@
+{
+  "key": "fmnist_dirichlet_a0.5_fedavg_E2_s0_T100",
+  "args": {
+    "dataset": "fmnist",
+    "partition": "dirichlet",
+    "alpha": 0.5,
+    "strategy": "fedavg",
+    "mu": 0.0,
+    "seed": 0,
+    "rounds": 100,
+    "epochs": 2,
+    "lr": 0.01,
+    "batch": 32,
+    "clients": 100,
+    "per_round": 10,
+    "unsorted": false,
+    "force": false,
+    "out": "results/blocoB"
+  },
+  "n_params": 184586,
+  "partition_tries": 1,
+  "client_size_min": 192,
+  "client_size_max": 1525,
+  "local_acc_std": 0.0529878488222739,
+  "local_acc_p10": 0.7786683904330963,
+  "wall_time_s": 894.4763762790026,
+  "env": {
+    "python": "3.12.16",
+    "torch": "2.15.0+cpu",
+    "cpu": "x86_64",
+    "cuda": false,
+    "cpu_model": "12th Gen Intel(R) Core(TM) i5-1235U",
+    "n_cpus": 12,
+    "host": "melchior",
+    "gpu": null
+  }
+}
