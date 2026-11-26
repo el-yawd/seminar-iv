@@ -12,8 +12,8 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | piloto | F-MNIST, semente 0, T = 20, sanidade μ = 0 | 10 | concluído | i5-1235U |
 | G | gate da reformulação α × E (negativo, E = 2 mantido) | 18 | concluído | i5-1235U |
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
-| B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 + 15 FedAvg | concluído (análise pendente) | i5-1235U (`melchior`), em `results/blocoB/` |
-| C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído (análise pendente) | `vostro-15-3515` |
+| B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 + 15 FedAvg | concluído e analisado (`analysis_bc.py`) | i5-1235U (`melchior`), em `results/blocoB/` |
+| C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído e analisado (`analysis_bc.py`): equivalência nos dois tipos | `vostro-15-3515` |
 | D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | em execução desde 25/11 | `vostro-15-3515` |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
 | microbench | custo do termo proximal, CPU de 1 *thread*, 30 repetições (H4) | — | `microbench.py` ainda não existe | i5-1235U |
@@ -113,9 +113,10 @@ por cliente, ambiente). A chave tem a forma
 O `analysis.py` calcula as métricas da Metodologia (acurácia das últimas 5 rodadas,
 instabilidade, P10 e DP locais, R_τ com censura), as diferenças pareadas com IC por *bootstrap*,
 o μ*, a avaliação descritiva de H2 e a regra de ampliar T. A opção `--results` lê outra pasta
-(por exemplo, `results/blocoB`). **Falta implementar:** a leitura dos
-blocos B, C e D (partições patológica e de quantidade) e os testes confirmatórios (Wilcoxon com
-Holm sobre os 5 α, TOST com δ = 1 p.p.), além das figuras.
+(por exemplo, `results/blocoB`). O `analysis_bc.py` analisa os blocos B
+(descritivo, contra o FedAvg da mesma máquina em `results/blocoB`) e C (Wilcoxon pareado e TOST com
+δ = 1 p.p.) e grava `results/blocoB_resumo.json` e `results/blocoC_resumo.json`. **Falta implementar:**
+o bloco D (Wilcoxon com Holm sobre os 5 α, TOST) e as figuras.
 
 Os demais scripts: `gate.py` (avaliação do bloco G), `analysis_piloto.py` e `fill_tables.py`
 (piloto), `partition_stats.py` e `min_size_check.py` (verificação das partições).

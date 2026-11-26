@@ -1,11 +1,11 @@
 \section{Desenvolvimento Inicial da Pesquisa}
 \label{desenvolvimento}
 
-Esta seção registra o que já foi executado do planejamento da Seção~\ref{metodologia}: a implementação do protótipo experimental, a geração e a verificação das partições não-IID, o piloto no Fashion-MNIST e o teste de sanidade entre FedProx com $\mu = 0$ e FedAvg. Também descreve as dificuldades encontradas e os ajustes feitos no plano original. Pelo cronograma, as atividades de 11 a 17 de novembro (ambiente, piloto e teste de sanidade) deveriam estar concluídas nesta etapa, e a execução dos blocos A e B começa na semana de 18 a 24 de novembro. Os resultados apresentados aqui são preliminares e não respondem às hipóteses H1--H4. Servem para validar o \textit{pipeline} e calibrar as próximas execuções. O código, os registros por rodada e os scripts que geram as tabelas e figuras desta seção estão no repositório do projeto (\linkProjeto), no diretório \texttt{experimentos/}.
+Esta seção registra o que já foi executado do protocolo proposto na Seção~\ref{proposta}, conforme o planejamento da Seção~\ref{metodologia}: a implementação do protótipo, a geração e a verificação das partições não-IID, o piloto e o teste de sanidade, o bloco de verificação do trabalho local (G) e, no Fashion-MNIST, os blocos A, B e C, que somam 185 execuções de 100 rodadas. Também descreve as dificuldades encontradas e os ajustes feitos no plano original. Os resultados são parciais: H2 foi avaliada de forma descritiva no bloco A, e H3 foi testada no bloco C, que é a primeira análise confirmatória do trabalho, mas apenas para o Fashion-MNIST. H1 depende do bloco D, e H4, do micro-experimento de custo. O código, os registros por rodada e os scripts que geram as tabelas e figuras desta seção estão no repositório do projeto (\linkProjeto), no diretório \texttt{experimentos/}.
 
 \subsection{Implementação realizada}
 
-O protótipo é um conjunto de módulos Python com responsabilidades separadas (Figura~\ref{fig:arquitetura}). A separação garante que o único componente que muda entre FedAvg e FedProx seja a função de perda local, e não o restante do \textit{pipeline}. Todos os módulos da figura, exceto os dois em tracejado, estão implementados e foram usados no piloto.
+O protótipo é um conjunto de módulos Python com responsabilidades separadas (Figura~\ref{fig:arquitetura}), um para cada componente da Tabela~\ref{tab:componentes}. A separação garante que o único componente que muda entre FedAvg e FedProx seja a função de perda local, e não o restante do \textit{pipeline}. Todos os módulos da figura, exceto o medidor de custo, em tracejado, estão implementados e foram usados nos blocos executados.
 
 \begin{figure}[ht]
     \centering
@@ -25,7 +25,7 @@ O protótipo é um conjunto de módulos Python com responsabilidades separadas (
         \node[mod, below=of strat] (models) {\texttt{models.py}\\ CNNs};
         \node[todo, below=of client] (bench) {\texttt{microbench.py}\\ custo em CPU};
         \node[cli, below=of models] (csv) {\texttt{results/*.csv}};
-        \node[todo, below=0.38cm of csv] (ana) {\texttt{analysis.py}\\ figuras e testes};
+        \node[mod, below=0.38cm of csv] (ana) {\texttt{analysis*.py}\\ métricas e testes};
         \draw[arr] (grid) -- (run);
         \draw[arr] (run) -- (strat);
         \draw[arr] (run.south west) -- (data.north east);
@@ -36,7 +36,7 @@ O protótipo é um conjunto de módulos Python com responsabilidades separadas (
         \draw[arr] (bench) -- (ana);
         \draw[arr] (csv) -- (ana);
     \end{tikzpicture}
-    \caption{Módulos do protótipo. Em cinza, pontos de entrada e saídas; em azul, módulos de biblioteca; em tracejado, módulos ainda não implementados (previstos para as etapas de custo e de análise). No piloto, a análise foi feita por \texttt{analysis\_piloto.py}.}
+    \caption{Módulos do protótipo. Em cinza, pontos de entrada e saídas; em azul, módulos de biblioteca; em tracejado, o módulo ainda não implementado (etapa de custo). A análise é feita por \texttt{analysis.py} (bloco A) e \texttt{analysis\_bc.py} (blocos B e C); as figuras e os testes do bloco D ainda serão acrescentados.}
     \label{fig:arquitetura}
 \end{figure}
 
@@ -110,38 +110,7 @@ Os clientes não usam momento local, para que o efeito do termo proximal não se
 
 \subsection{Algoritmos utilizados}
 
-O Algoritmo~\ref{alg:fedprox} descreve uma execução completa do FedProx como implementada no protótipo. O condicional da linha~\ref{lin:prox} é o único ponto de divergência em relação ao FedAvg: com $\mu = 0$ o algoritmo se reduz ao FedAvg, propriedade usada como teste de sanidade (Seção~\ref{sec:fluxo}).
-
-\begin{algorithm}[ht]
-    \small
-    \caption{FedProx com avaliação e medição de tempo.}
-    \label{alg:fedprox}
-    \KwIn{$K$, $C$, $T$, $E$, $B$, $\eta$, $\mu$, semente $s$}
-    \KwOut{modelo global $w^T$; registros por rodada}
-    fixa semente $s$; gera partições $\{\mathcal{D}_k\}$; inicializa $w^0$\;
-    \For{$t = 0, \dots, T-1$}{
-        $S_t \leftarrow$ amostra de $\lfloor CK \rfloor$ clientes\;
-        \ForEach{$k \in S_t$ \textbf{em paralelo}}{
-            $w \leftarrow w^t$\;
-            \For{$e = 1, \dots, E$}{
-                \ForEach{lote $b \subset \mathcal{D}_k$ de tamanho $B$}{
-                    $L \leftarrow \ell(w; b)$\;
-                    \If{$\mu > 0$\nllabel{lin:prox}}{
-                        $L \leftarrow L + \frac{\mu}{2}\lVert w - w^t\rVert^2$\;
-                    }
-                    $w \leftarrow w - \eta \nabla_w L$\;
-                }
-                registra tempo da época $t_{k,e}$\;
-            }
-            envia $w_k^{t+1} \leftarrow w$, $n_k$ e $\{t_{k,e}\}$ ao servidor\;
-        }
-        $w^{t+1} \leftarrow \sum_{k\in S_t} \frac{n_k}{\sum_{j\in S_t} n_j} w_k^{t+1}$\;
-        avalia $w^{t+1}$ no teste centralizado; grava CSV\;
-    }
-\end{algorithm}
-
-
-FedAvgM e FedAdam usam as implementações nativas do Flower e trocam apenas a linha de agregação por uma atualização com momento ou com Adam no servidor, enquanto o cliente é o mesmo do FedAvg. Ambas já estão disponíveis em \texttt{strategies.py}, mas ainda não foram executadas. O SCAFFOLD não está entre as estratégias nativas da versão 1.44 do Flower e ainda não foi integrado ao protótipo (Seção~\ref{sec:ajustes}).
+O protótipo implementa o Algoritmo~\ref{alg:fedprox} da Seção~\ref{sec:funcionamento}. FedAvgM e FedAdam usam as implementações nativas do Flower e trocam apenas a linha de agregação por uma atualização com momento ou com Adam no servidor, enquanto o cliente é o mesmo do FedAvg; ambas foram executadas no bloco B (Seção~\ref{sec:blocoB}). O SCAFFOLD não está entre as estratégias nativas da versão 1.44 do Flower e ainda não foi integrado ao protótipo (Seção~\ref{sec:ajustes}).
 
 \subsection{Pareamento das execuções no Flower}
 \label{sec:pareamento}
@@ -155,7 +124,7 @@ Um segundo detalhe afeta a reprodutibilidade bit a bit. O Flower agrega os resul
 \subsection{Cenários experimentais e partições geradas}
 \label{sec:cenarios}
 
-A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que ele responde. C1 e C2 formam o núcleo do trabalho, C3 isola o tipo de heterogeneidade, C4 mede o custo e C5 é uma extensão condicionada ao tempo disponível. Nesta etapa, as partições de C1 e C3 foram geradas e verificadas, e o piloto cobriu dois níveis de C1 e os três valores de $\mu$ de C2.
+A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que ele responde. C1 e C2 formam o núcleo do trabalho, C3 isola o tipo de heterogeneidade, C4 mede o custo e C5 é uma extensão condicionada ao tempo disponível. As partições de C1 e C3 foram geradas e verificadas. No Fashion-MNIST, C1 e C2 foram cobertos pelo bloco A, e C3, pelo bloco C.
 
 \begin{table*}[t]
     \centering\small
@@ -167,7 +136,7 @@ A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que el
         \midrule
         C1 & Varredura de nível ($\alpha$) & Dirichlet de rótulos com $\alpha$ de 0,05 (cada cliente vê poucas classes) a 100 (praticamente IID). Localiza o limiar a partir do qual o FedProx passa a compensar. & H1 & bloco A concluído (F-MNIST; Seção~\ref{sec:blocoA}) \\
         C2 & Sensibilidade a $\mu$ & Cruza os três valores de $\mu$ com todos os $\alpha$. Separa ``o FedProx não funciona'' de ``$\mu$ mal escolhido''. & H2 & bloco A concluído (F-MNIST); $\mu^* = 0{,}01$ \\
-        C3 & Tipo de heterogeneidade & Partição patológica ($k = 2$ classes) e desvio só de quantidade, com rótulos IID. & H3 & bloco C concluído (F-MNIST; análise pendente) \\
+        C3 & Tipo de heterogeneidade & Partição patológica ($k = 2$ classes) e desvio só de quantidade, com rótulos IID. & H3 & bloco C concluído (F-MNIST; Seção~\ref{sec:blocoC}) \\
         C4 & Custo local em CPU restrita & Tempo por época e memória de pico de FedAvg e FedProx em 1 thread de CPU. & H4 & a executar \\
         C5 & \textit{Stragglers} (opcional) & Parte dos clientes executa só uma fração das épocas locais \citep{li2020fedprox}. & extensão & -- \\
         \bottomrule
@@ -331,10 +300,81 @@ O FedProx, por outro lado, quase não mudou o resultado. Com $\mu = 0{,}01$, a d
 
 As três decisões da Metodologia que dependiam do bloco A foram tomadas com as regras fixadas antes da execução:
 \begin{itemize}
-    \item \textbf{Escolha de $\mu^*$.} O $\mu$ com maior acurácia média no bloco foi $\mu^* = 0{,}01$ (78,99\%, contra 78,96\% com $\mu = 0{,}1$ e 78,35\% com $\mu = 1$). A margem sobre $\mu = 0{,}1$ é de 0,03~p.p., um empate na prática, mas a regra foi aplicada como definida. Em consequência, os blocos C e D comparam o FedAvg com uma configuração do FedProx que, no bloco A, não teve efeito mensurável. Por isso, H1 deve ser julgada sobretudo pelo teste de equivalência (TOST).
+    \item \textbf{Escolha de $\mu^*$.} O $\mu$ com maior acurácia média no bloco foi $\mu^* = 0{,}01$ (78,99\%, contra 78,96\% com $\mu = 0{,}1$ e 78,35\% com $\mu = 1$). A margem sobre $\mu = 0{,}1$ é de 0,03~p.p., um empate na prática, mas a regra foi aplicada como definida. Em consequência, os blocos C e D comparam o FedAvg com uma configuração do FedProx que, no bloco A, não teve efeito relevante. Por isso, H1 deve ser julgada sobretudo pelo teste de equivalência (TOST).
     \item \textbf{H2, em parte confirmada.} A previsão de que $\mu$ grande prejudica no regime quase IID se confirmou: com $\mu = 1$ e $\alpha = 100$, o intervalo de $\Delta$ foi de $-0{,}79$ a $-0{,}66$~p.p. O melhor $\mu$ ficou em $\{0{,}01; 0{,}1\}$ em quatro dos cinco $\alpha$. A exceção é $\alpha = 0{,}05$, em que $\mu = 1$ teve o melhor posto médio (1,8, contra 2,0 e 2,2). Ali, porém, os postos são próximos e as médias dos três $\mu$ diferem em no máximo 0,18~p.p. Na prática, no regime mais heterogêneo nenhum $\mu$ se destaca.
     \item \textbf{Número de rodadas mantido.} Das execuções com $\alpha \leq 0{,}1$, 80\% atingiram $\tau$ (todas com $\alpha = 0{,}1$ e três das cinco sementes com $\alpha = 0{,}05$, nos dois algoritmos). Como a regra só amplia $T$ para 200 quando menos da metade das execuções atinge $\tau$, mantém-se $T = 100$.
 \end{itemize}
+
+\subsection{Bloco B: correções no servidor}
+\label{sec:blocoB}
+
+O bloco B executa FedAvgM e FedAdam nos cinco valores de $\alpha$, com as sementes 0 a 2, $T = 100$ e $E = 2$ (30 execuções), sem o SCAFFOLD, que não foi integrado (Seção~\ref{sec:ajustes}). Como o bloco rodou na CPU i5-1235U, e não na máquina do bloco A, o FedAvg das mesmas sementes foi refeito nela (15 execuções), para que todas as comparações sejam entre execuções da mesma máquina. As 45 execuções levaram 13,9~min em média. As 30 execuções de FedAvgM e FedAdam foram gravadas com uma versão do código anterior ao registro da máquina nos resultados; para confirmar que continuam comparáveis, uma delas foi refeita com o código atual e reproduziu a original bit a bit (acurácia, perda e clientes sorteados nas 101 avaliações). O FedAvg refeito ficou a no máximo 0,01~p.p. do FedAvg do bloco A nas mesmas sementes, na média de cada $\alpha$. Por ter três sementes, o bloco é descritivo e serve apenas para situar a magnitude dos efeitos (Tabela~\ref{tab:blocoB}).
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Bloco B (Fashion-MNIST, sementes 0 a 2, mesma máquina): médias das três sementes. Acc.\ e P10 como na Tabela~\ref{tab:blocoA}; $\Delta$: estratégia $-$ FedAvg na mesma semente (p.p.); $R_\tau$: rodada média em que a acurácia atinge $\tau = 76{,}2\%$ (FedAvg com $\alpha = 0{,}05$: 2 de 3 execuções atingem).}
+    \label{tab:blocoB}
+    \setlength{\tabcolsep}{2.2pt}
+    \begin{tabular}{@{}crrrrrrrrr@{}}
+        \toprule
+        & \multicolumn{3}{c}{Acc.} & \multicolumn{3}{c}{P10} & \multicolumn{3}{c}{$R_\tau$} \\
+        \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+        & & \multicolumn{2}{c}{$\Delta$} & & \multicolumn{2}{c}{$\Delta$} & & & \\
+        $\alpha$ & Avg & AvgM & Adam & Avg & AvgM & Adam & Avg & AvgM & Adam \\
+        \midrule
+        0,05 & 69{,}6 & $-6{,}6$ & $+5{,}2$ & 24{,}4 & $-11{,}0$ & $+12{,}8$ & 74 & 83 & 64 \\
+        0,1  & 76{,}0 & $+1{,}3$ & $+1{,}5$ & 52{,}6 & $-15{,}7$ & $+8{,}1$  & 63 & 40 & 42 \\
+        0,5  & 82{,}1 & $+4{,}1$ & $+3{,}7$ & 72{,}4 & $+8{,}0$  & $+5{,}5$  & 31 & 21 & 25 \\
+        1    & 83{,}3 & $+3{,}9$ & $+3{,}8$ & 76{,}5 & $+5{,}0$  & $+5{,}8$  & 28 & 17 & 23 \\
+        100  & 84{,}6 & $+5{,}0$ & $+3{,}9$ & 81{,}5 & $+5{,}9$  & $+4{,}2$  & 25 & 15 & 20 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+A primeira observação é de escala. As correções no servidor alteram a acurácia global média em 1,3 a 6,6~p.p., enquanto no bloco A o FedProx com $\mu \leq 0{,}1$ a alterou em no máximo 0,12~p.p. A diferença é de uma a duas ordens de grandeza, nos mesmos dados, com o mesmo cliente e o mesmo pareamento.
+
+A segunda é que o FedAdam melhorou a acurácia média do FedAvg em todos os $\alpha$, embora com $\alpha = 0{,}1$ uma das três sementes tenha ficado abaixo dele ($-0{,}5$~p.p.) e a instabilidade tenha subido (3,9 contra 2,9~p.p.). O maior ganho ocorreu no regime mais heterogêneo: com $\alpha = 0{,}05$, $+5{,}2$~p.p.\ na acurácia (de $+3{,}0$ a $+7{,}9$ entre as sementes), $+12{,}8$~p.p.\ no percentil 10 dos clientes e menor instabilidade (3,7 contra 4,9~p.p.). O resultado está na direção do relatado por \citet{enang2026optimiser}, em que o FedAdam leva vantagem sob heterogeneidade severa.
+
+A terceira é que o FedAvgM depende do nível de heterogeneidade. Com $\alpha \geq 0{,}5$, foi o melhor dos três e o que chegou mais cedo a $\tau$ (de 15 a 21 rodadas, contra 25 a 31 do FedAvg). Com $\alpha = 0{,}05$, perdeu 6,6~p.p.\ (de $-10{,}4$ a $-4{,}3$ entre as sementes) e 11~p.p.\ no percentil 10, e a instabilidade subiu de 4,9 para 7,1~p.p.; com $\alpha = 0{,}1$, o ganho médio de 1,3~p.p.\ esconde sementes com sinais opostos ($-2{,}1$ a $+6{,}1$) e uma queda de 15,7~p.p.\ no percentil 10. Uma explicação plausível é o tamanho efetivo do passo: com momento $\beta = 0{,}9$ e $\eta_s = 1$, em regime estacionário o passo do servidor é cerca de $\eta_s/(1-\beta) = 10$ vezes o do FedAvg. Quando clientes de rodadas consecutivas puxam o modelo em direções muito diferentes, o momento carrega o erro de uma rodada para as seguintes. Os hiperparâmetros do servidor, assim como os do cliente, não foram ajustados por algoritmo nem por nível de heterogeneidade (ameaças à validade, Seção~\ref{metodologia}), e esse resultado não deve ser lido como limite do FedAvgM, e sim da configuração padrão.
+
+Para a pergunta deste trabalho, o bloco B fornece uma escala. Se a correção no servidor, que não custa nada ao cliente, produz efeitos dessa ordem e o FedProx com o $\mu^*$ escolhido não produz efeito relevante, o FedProx precisaria de um ganho em outra dimensão, como robustez ou custo até o alvo, para se justificar na borda. Essa leitura ainda é descritiva: três sementes, um dataset e hiperparâmetros do servidor não ajustados.
+
+\subsection{Bloco C: tipo de heterogeneidade (H3)}
+\label{sec:blocoC}
+
+O bloco C compara o FedAvg e o FedProx com $\mu^* = 0{,}01$ nas partições patológica ($k = 2$ classes, 600 amostras por cliente) e de quantidade (rótulos IID, de 9 a \num{4627} amostras por cliente na semente 10), com as sementes confirmatórias 5 a 14 (40 execuções, 12,8~min em média, todas na mesma máquina). Na primeira tentativa, todas as execuções da partição patológica falharam na primeira rodada por um erro de tipo nos índices dos clientes, corrigido sem efeito sobre as partições de Dirichlet (Tabela~\ref{tab:ajustes}). A análise é feita por \texttt{experimentos/analysis\_bc.py}, com os testes da Tabela~\ref{tab:hipoteses}: Wilcoxon pareado bilateral, com correção de Holm sobre as duas partições, e TOST com $\delta = 1$~p.p. Antes dos testes, os $\Delta$ são arredondados a 4 casas decimais: a acurácia de uma rodada é um múltiplo de 0,01~p.p.\ (acertos em \num{10000} imagens), e sem o arredondamento o ruído de ponto flutuante desfaria os empates verdadeiros entre as diferenças (Tabela~\ref{tab:blocoC}).
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Bloco C (Fashion-MNIST, sementes 5 a 14, $\mu^* = 0{,}01$). Acc.: média $\pm$ desvio padrão das dez sementes (\%); $\bar\Delta$: FedProx $-$ FedAvg na mesma semente (p.p.), com IC 95\% por \textit{bootstrap}; $p_W$: Wilcoxon bilateral, com correção de Holm sobre as duas partições; $p_T$: TOST ($\delta = 1$~p.p.).}
+    \label{tab:blocoC}
+    \setlength{\tabcolsep}{2.5pt}
+    \begin{tabular}{@{}lccc@{}}
+        \toprule
+        & \multicolumn{2}{c}{Acc.} & \\
+        \cmidrule(lr){2-3}
+        Partição & FedAvg & FedProx & $\bar\Delta$ [IC 95\%] \\
+        \midrule
+        Patológica & 72{,}34 $\pm$ 1{,}16 & 72{,}34 $\pm$ 1{,}15 & $+0{,}000$ [$-0{,}013$; $+0{,}015$] \\
+        Quantidade & 86{,}62 $\pm$ 0{,}31 & 86{,}59 $\pm$ 0{,}31 & $-0{,}027$ [$-0{,}038$; $-0{,}017$] \\
+        \midrule
+        & $p_W$ & $p_T$ & $\bar\Delta$P10 [IC 95\%] \\
+        \midrule
+        Patológica & 0{,}90 & 0{,}001 & $+0{,}02$ [$-0{,}22$; $+0{,}26$] \\
+        Quantidade & 0{,}004 & 0{,}001 & $-0{,}08$ [$-0{,}33$; $+0{,}16$] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{H3 na partição patológica.} A previsão era que o FedProx superasse o FedAvg. Não superou: a diferença média foi de $+0{,}0002$~p.p., o maior $|\Delta|$ entre as dez sementes foi de 0,04~p.p., o FedProx venceu em 4 das 10, e o Wilcoxon não rejeitou a igualdade ($p = 0{,}90$). Mais do que isso, o TOST concluiu pela equivalência com $p = 0{,}001$, o menor valor possível com dez pares: todas as diferenças ficaram muito dentro de $\pm 1$~p.p. Essa parte de H3 é, portanto, rejeitada no Fashion-MNIST. O resultado é coerente com o NIID-Bench, em que, com duas classes por cliente, o FedProx ficou abaixo do FedAvg no Fashion-MNIST, mesmo com o melhor de quatro valores de $\mu$ \citep{li2022niidbench}, o que já havia levado a Seção~\ref{trabalhosrelacionados} a tratar essa previsão como passível de falhar.
+
+\paragraph{H3 sob desvio de quantidade.} A previsão de equivalência se confirmou ($p_{\text{TOST}} = 0{,}001$). Há, porém, um detalhe instrutivo: a diferença é também estatisticamente significativa ($p_W = 0{,}004$ após a correção de Holm), porque o FedProx ficou abaixo do FedAvg em todas as dez sementes. A magnitude é de $-0{,}03$~p.p., cerca de três amostras do conjunto de teste de \num{10000}. O pareamento exato torna detectáveis diferenças sistemáticas desse tamanho, sem relevância prática. É esse caso que motivou explicitar, na regra~\eqref{eq:mapa}, a precedência da equivalência sobre a diferença; pela regra, a célula é classificada como equivalente. As conclusões sobre H3 não dependem dessa regra, definida depois do bloco: H3 previa equivalência sob desvio de quantidade, o que o TOST confirma, e a previsão de superioridade na partição patológica falha com qualquer dos dois testes.
+
+\paragraph{O tipo de desvio e o FedAvg.} Além do teste de H3, o bloco mostra o efeito de cada tipo de desvio sobre o próprio FedAvg. A partição patológica levou a acurácia a 72,3\% e o percentil 10 a 47,0\%, valores entre os de $\alpha = 0{,}05$ e $\alpha = 0{,}1$ no bloco A, mas com instabilidade menor (2,8~p.p., contra 5,6 e 3,1~p.p.), possivelmente porque, com clientes de tamanho igual, nenhuma rodada é dominada por um cliente muito maior que os demais. O desvio só de quantidade, ao contrário, não prejudicou o FedAvg: 86,6\%, acima dos 84,7\% obtidos com Dirichlet $\alpha = 100$ no bloco A (com outras sementes, o que torna a comparação apenas indicativa). Uma explicação plausível é que, com rótulos IID, os clientes grandes dão muito mais passos locais e recebem mais peso na agregação, sem puxar o modelo para uma distribuição enviesada. O resultado é coerente com a observação do NIID-Bench de que o desvio de quantidade pouco afeta o FedAvg em classificação \citep{li2022niidbench} e indica que, na partição de Dirichlet, a degradação com $\alpha$ pequeno vem do desvio de rótulos, e não do desbalanceamento de tamanho que o acompanha (Tabela~\ref{tab:particoes}).
+
+\paragraph{Convergência.} Na partição patológica, só 5 das 10 execuções de cada algoritmo atingiram $\tau = 76{,}2\%$ em 100 rodadas, sempre as mesmas sementes nos dois algoritmos e na mesma rodada média (93,2). A regra de ampliar $T$ foi definida para $\alpha \leq 0{,}1$ e não se aplica a este bloco; $T = 100$ foi mantido, e $R_\tau$ é comparado só nos cinco pares não censurados. Sob desvio de quantidade, todas atingiram $\tau$, em 15,6 rodadas em média, também iguais nos dois algoritmos.
+
+\paragraph{Discussão.} O bloco C confirma, agora com sementes que não participaram da escolha de $\mu^*$, o padrão do bloco A: com $\mu = 0{,}01$, o termo proximal não altera o treinamento de forma relevante, em nenhum tipo de heterogeneidade: o maior efeito, sob desvio de quantidade, é estatisticamente detectável, mas de $-0{,}03$~p.p. Isso responde à parte de QP1 sobre o tipo de heterogeneidade para o valor de $\mu$ escolhido pelo protocolo, mas também delimita o alcance da resposta. Como $\mu^*$ é pequeno, H1 e H3 testam um FedProx muito próximo do FedAvg, e um efeito com $\mu = 1$, que no bloco A reduziu a acurácia em 0,6 a 0,9~p.p.\ para $\alpha \geq 0{,}1$, fica fora da fase confirmatória. A escolha de $\mu^*$ foi feita pela regra fixada antes dos dados e não será revista; o que muda é a interpretação: a conclusão será sobre o FedProx ``com $\mu$ escolhido pela acurácia'', que é o mesmo critério de escolha usado pelo NIID-Bench \citep{li2022niidbench}.
 
 \subsection{Tempo de execução e orçamento}
 
@@ -342,7 +382,9 @@ O piloto também serviu para medir o custo real de uma execução (Tabela~\ref{t
 
 A diferença entre os dois níveis não vem do volume total de trabalho, que é até menor com $\alpha = 0{,}1$ (tempo médio por época de 1,08~s, contra 1,28~s com $\alpha = 100$), mas do cliente mais lento. Como a agregação espera todos os clientes da rodada, o tempo da rodada acompanha o maior tempo de época entre os sorteados, que foi em média de 3,35~s com $\alpha = 0{,}1$ e de 1,93~s com $\alpha = 100$. Isso decorre do desbalanceamento de quantidade da Tabela~\ref{tab:particoes}: com $\alpha = 0{,}1$, um cliente com mais de \num{3000} amostras pode estar entre os sorteados. Em uma implantação real, esse efeito se somaria à heterogeneidade de \textit{hardware}, o que reforça a relevância do cenário C5.
 
-Extrapolando para $T = 100$, uma execução do Fashion-MNIST levaria de 7 a 11~minutos nesta CPU, contra cerca de 1~minuto estimado para a T4 no planejamento. Só o bloco A do Fashion-MNIST (100 execuções) consumiria de 12 a 18~h na CPU local. A estimativa de 19~h de GPU para as 570 execuções, portanto, ainda não está confirmada. Ela depende de quanto a T4 reduz o tempo de rodada, e parte do custo (inicialização e orquestração do Ray) não depende do dispositivo de treino. Antes de lançar a grade, três medidas estão previstas: (i) medir o tempo de uma execução de 100 rodadas na T4; (ii) dividir os blocos entre o Kaggle e a CPU local, o que a chave única por configuração já permite sem retrabalho; e (iii) se o orçamento ainda não couber, reduzir o bloco B para duas sementes antes de reduzir os blocos A e D, que sustentam H1 e H2. Os tempos por época desta tabela não substituem o micro-experimento C4: foram medidos com 10 clientes disputando 12 \textit{threads} e servem apenas como ordem de grandeza.
+Extrapolando para $T = 100$, uma execução do Fashion-MNIST levaria de 7 a 11~minutos nesta CPU, contra cerca de 1~minuto estimado para a T4 no planejamento. Só o bloco A do Fashion-MNIST (100 execuções) consumiria de 12 a 18~h na CPU local. A estimativa de 19~h de GPU para as 570 execuções, portanto, ainda não está confirmada. Ela depende de quanto a T4 reduz o tempo de rodada, e parte do custo (inicialização e orquestração do Ray) não depende do dispositivo de treino. No planejamento desta etapa, três medidas foram previstas antes da grade: medir o tempo na T4, dividir os blocos entre o Kaggle e a CPU local e, se necessário, reduzir o bloco B para duas sementes. Na prática, os blocos do Fashion-MNIST rodaram inteiramente em CPU, divididos entre duas máquinas, o bloco B manteve as três sementes, e a medição na T4 ficou para o CIFAR-10. Os tempos por época desta tabela não substituem o micro-experimento C4: foram medidos com 10 clientes disputando 12 \textit{threads} e servem apenas como ordem de grandeza.
+
+A extrapolação subestimou o custo. Nos blocos A a C, com $T = 100$, cada execução levou em média 13,3~min no Ryzen 7 3700U (blocos A e C) e 13,9~min no i5-1235U (bloco B), e não os 7 a 11~min previstos. As 185 execuções somam cerca de 42~h de CPU, divididas entre as duas máquinas. Com esse ritmo, o bloco D do Fashion-MNIST (100 execuções) leva cerca de 22~h em uma máquina, ou metade disso com as sementes divididas entre as duas, o que ainda cabe no cronograma.
 
 \subsection{Dificuldades encontradas e ajustes no planejamento}
 \label{sec:ajustes}
@@ -360,18 +402,21 @@ A Tabela~\ref{tab:ajustes} reúne as diferenças entre o que foi planejado na Se
         Sorteio de clientes pelo Flower, com semente fixa & Os nós recebem identificadores aleatórios a cada simulação; o sorteio do Flower não é reprodutível entre execuções & O servidor sorteia o índice da partição e o envia na configuração da rodada (Seção~\ref{sec:pareamento}); pareamento verificado pelos índices gravados no CSV \\
         Reprodução exata de $\mu = 0$ por algoritmos determinísticos & A ordem de chegada dos resultados ao servidor varia entre execuções, e a soma em ponto flutuante depende da ordem & Resultados ordenados pelo índice da partição antes da agregação \\
         Partições pelo Flower Datasets & Com $\alpha = 0{,}05$, o mínimo de 10 amostras e o limite de 10 tentativas do \texttt{DirichletPartitioner} não são atingíveis & Implementação própria, com mínimo de 5 amostras e até \num{100000} tentativas (930 sorteios para $\alpha = 0{,}05$) \\
-        Piloto em GPU no Kaggle (T4) & Prioridade dada a validar o \textit{pipeline} antes de consumir a cota & Piloto em CPU local; a medição de tempo na T4 passa a ser o primeiro passo dos blocos A e B \\
-        SCAFFOLD via \textit{baselines} do Flower & Não é estratégia nativa do Flower 1.44 e altera também o cliente & Integração adiada para o bloco B; se não couber no prazo, o bloco B fica com FedAvgM e FedAdam \\
-        Estimativa de cerca de 1~min por execução do F-MNIST (T4) & Na CPU local, 20 rodadas levam de 173 a 233~s, com cerca de 85~s fixos, e o tempo da rodada é ditado pelo maior cliente & Orçamento a confirmar na T4 antes da grade; divisão dos blocos entre Kaggle e CPU local; corte prioritário no bloco B \\
+        Piloto em GPU no Kaggle (T4) & Prioridade dada a validar o \textit{pipeline} antes de consumir a cota & Piloto em CPU local; blocos A a C do F-MNIST também em CPU; medição na T4 adiada para o CIFAR-10 \\
+        SCAFFOLD via \textit{baselines} do Flower & Não é estratégia nativa do Flower 1.44 e altera também o cliente & Bloco B executado só com FedAvgM e FedAdam; integração do SCAFFOLD condicionada ao prazo \\
+        Estimativa de cerca de 1~min por execução do F-MNIST (T4) & Na CPU local, 20 rodadas levam de 173 a 233~s, com cerca de 85~s fixos, e o tempo da rodada é ditado pelo maior cliente & F-MNIST executado em CPU, dividido entre duas máquinas (13 a 14~min por execução); orçamento da T4 a confirmar antes do CIFAR-10 \\
         Épocas locais fixas ($E = 2$) & No piloto, $\mu \leq 0{,}1$ não alterou o treinamento, possivelmente pelo pouco trabalho local & Bloco G de verificação (18 execuções, cerca de 2~h de CPU); critério não atendido, $E = 2$ mantido (Seção~\ref{sec:gate}) \\
         Divisão dos blocos entre máquinas & Em uma segunda CPU (AMD Ryzen 7 3700U, Python 3.13), a mesma configuração sorteia os mesmos clientes, mas a acurácia diverge a partir da rodada 3 (até 0,13~p.p.), da ordem dos $\Delta$ medidos & Cada máquina executa sementes inteiras (\texttt{--shard} por semente) e só se pareiam execuções da mesma máquina; nela, $\mu = 0$ reproduz o FedAvg bit a bit \\
+        Bloco B comparado ao FedAvg do bloco A & O bloco B rodou em outra máquina, e suas 30 execuções foram gravadas por uma versão anterior ao registro da máquina (\texttt{env.host}) & FedAvg das sementes 0 a 2 refeito na mesma máquina (15 execuções); uma execução antiga, refeita com o código atual, reproduziu a original bit a bit \\
+        Partição patológica ($k = 2$) & Com clientes de mesmo tamanho, o \texttt{np.savez} grava uma matriz de objetos, e o índice do cliente perde o tipo inteiro; todas as execuções falhavam na rodada 1 & Índices convertidos para \texttt{int64} no cliente; resultados das partições de Dirichlet inalterados, verificado bit a bit \\
+        Decisão por Wilcoxon e TOST & Sob desvio de quantidade, $\Delta = -0{,}03$~p.p.\ é significativo e, ao mesmo tempo, equivalente a zero & Regra de classificação com precedência da equivalência (Equação~\eqref{eq:mapa}), explicitada após o bloco C; os dois testes são sempre reportados \\
         \bottomrule
     \end{tabular}
 \end{table*}
 
 \subsection{Situação em relação ao cronograma}
 
-Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores; o OE2 foi atingido com o protótipo e o teste de sanidade, faltando apenas os algoritmos de referência no bloco B; o OE3 foi atendido para o Fashion-MNIST, faltando gerar as partições do CIFAR-10 e das sementes confirmatórias, o que é automático a partir da semente; e os OE4 e OE5 foram iniciados com o piloto, que já registra todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. As atividades previstas até 17 de novembro foram concluídas, com o piloto executado em CPU local em vez de GPU. O bloco de verificação do trabalho local (Seção~\ref{sec:gate}), não previsto no cronograma, consumiu de 18 a 21 de novembro e manteve o desenho original. O bloco A começou em 22 de novembro, em uma segunda máquina (Tabela~\ref{tab:ajustes}), e foi concluído no Fashion-MNIST em 25 de novembro, com cerca de 14~min por execução (Seção~\ref{sec:blocoA}). No mesmo dia, essa máquina executou o bloco C (40 execuções), cuja análise ainda não foi feita. O bloco B passou para a outra máquina do grupo, que refaz o FedAvg das sementes 0 a 2, porque só se pareiam execuções da mesma máquina. A principal pendência herdada pela etapa seguinte continua sendo confirmar o tempo por execução na T4.
+Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores. O OE2 foi atingido com o protótipo, o teste de sanidade e os algoritmos de referência do bloco B, exceto o SCAFFOLD. O OE3 foi atendido para o Fashion-MNIST, e as partições do CIFAR-10 são geradas automaticamente a partir da semente. O OE4 está em andamento: no Fashion-MNIST, a grade exploratória (bloco A), as referências (bloco B) e a confirmação por tipo de heterogeneidade (bloco C) estão concluídas, e falta a confirmação por nível (bloco D). O OE5 cobre todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita, e o OE6 foi iniciado com a análise confirmatória do bloco C. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. O atraso em relação ao planejado vem principalmente de as simulações terem rodado em CPU, com cerca de 14~min por execução, contra cerca de 1~min estimado para a GPU, e foi absorvido pela divisão dos blocos entre duas máquinas. A principal pendência continua sendo medir o tempo por execução na T4, de que depende o CIFAR-10.
 
 \begin{table}[ht]
     \centering\small
@@ -385,8 +430,9 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
         Ambiente, piloto e teste de sanidade & 11--17 nov. & concluído (piloto em CPU) \\
         Verificação do trabalho local (bloco G) & -- & concluído; $E = 2$ mantido \\
         Reprodutibilidade em segunda máquina & -- & concluído \\
-        Blocos A e B + escolha de $\mu^*$ & 18--24 nov. & atrasado; A concluído (F-MNIST), $\mu^* = 0{,}01$; B a executar \\
-        Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & C concluído (F-MNIST); D a executar \\
+        Blocos A e B + escolha de $\mu^*$ & 18--24 nov. & concluídos com atraso (F-MNIST); $\mu^* = 0{,}01$; B sem SCAFFOLD \\
+        Formalização da proposta & -- & concluído (Seção~\ref{proposta}) \\
+        Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & C concluído e analisado (F-MNIST); D a executar \\
         Micro-experimento de custo em CPU & 25 nov.--8 dez. & a executar \\
         Análise estatística e figuras & 2--8 dez. & a executar \\
         Resultados, conclusões e entrega & 2--15 dez. & a executar \\
@@ -394,4 +440,4 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
     \end{tabular}
 \end{table}
 
-Os próximos passos são, nesta ordem: (i) concluir o bloco B no Fashion-MNIST, na outra máquina; (ii) executar o bloco D, com cada semente inteira em uma só máquina; (iii) medir o tempo por execução na T4 (\texttt{experimentos/kaggle.ipynb}), executar o bloco A no CIFAR-10 e escolher o $\mu^*$ desse dataset; (iv) integrar o SCAFFOLD ao bloco B, se couber no prazo; e (v) implementar \texttt{microbench.py} e completar \texttt{analysis.py}, que já calcula as métricas, as diferenças pareadas e as decisões do bloco A, com a leitura dos blocos B, C e D e os testes confirmatórios (Wilcoxon com correção de Holm e TOST).
+Os próximos passos são, nesta ordem: (i) executar o bloco D no Fashion-MNIST, com as sementes divididas entre as duas máquinas, e testar H1 com Wilcoxon, correção de Holm e TOST; (ii) medir o tempo por execução na T4 (\texttt{experimentos/kaggle.ipynb}), executar o bloco A no CIFAR-10 e escolher o $\mu^*$ desse dataset; (iii) implementar \texttt{microbench.py} e executar o micro-experimento de custo (H4); (iv) gerar as figuras (curvas por $\alpha$ e mapa $\alpha \times \mu$) e montar o mapa de \textit{trade-off} pela regra~\eqref{eq:mapa}; e (v) integrar o SCAFFOLD ao bloco B, se couber no prazo.

@@ -1,0 +1,208 @@
+\section{Proposta}
+\label{proposta}
+
+Esta seção formaliza a solução que o trabalho desenvolve para o problema definido na Introdução. Como discutido na Seção~\ref{trabalhosrelacionados}, a pesquisa não propõe um algoritmo de agregação novo: \emph{avalia e estende} abordagens existentes. O que se propõe é um \textbf{protocolo de avaliação pareada} do FedProx contra o FedAvg, implementado como um protótipo aberto sobre o Flower, que transforma a pergunta ``quando o FedProx compensa?'' em uma sequência de execuções controladas, medições e decisões estatísticas com regras fixadas de antemão. O produto final do protocolo é um mapa que associa cada tipo e nível de heterogeneidade a uma recomendação de uso. A Seção~\ref{metodologia} detalha as hipóteses, as métricas e o desenho dos experimentos; a Seção~\ref{desenvolvimento} registra o que já foi executado com este protocolo.
+
+\subsection{Visão geral da proposta}
+\label{sec:visao}
+
+A literatura diverge sobre o FedProx, e parte da divergência vem de fatores que mudam junto com o algoritmo: a tarefa, a forma da partição, o valor de $\mu$, o número de repetições e a maneira de medir o custo (Seção~\ref{trabalhosrelacionados}). A ideia central da proposta é eliminar esses fatores de confusão por construção. Como o FedProx com $\mu = 0$ é exatamente o FedAvg (Equação~\eqref{eq:fedprox}), é possível montar pares de execuções que compartilham \emph{tudo}: a partição dos dados, a inicialização do modelo, os clientes sorteados em cada rodada e a ordem dos lotes. A única diferença dentro do par é o termo proximal $\frac{\mu}{2}\lVert w - w^t\rVert^2$. A diferença pareada
+\begin{equation}
+    \Delta_s(\text{tipo}, \alpha, \mu) = \text{acc}_{\text{FedProx}(\mu)}(s) - \text{acc}_{\text{FedAvg}}(s)
+    \label{eq:delta}
+\end{equation}
+mede, assim, o efeito do termo proximal na semente $s$, e não uma mistura dele com o efeito do sorteio. Variando a heterogeneidade de forma controlada, em tipo e em nível, o protocolo obtém $\Delta$ em cada ponto do espaço de interesse e decide, com testes que podem concluir tanto pela diferença quanto pela equivalência, em qual situação cada ponto se encontra.
+
+O objetivo da solução é, portanto, responder às duas questões de pesquisa com evidência controlada: onde o FedProx muda a acurácia e a estabilidade (QP1) e se o custo local do termo proximal é compensado pela economia de rodadas (QP2). A Figura~\ref{fig:proposta} mostra os componentes e o fluxo da proposta. Eles se organizam em quatro funções: gerar heterogeneidade controlada (P2), simular o treinamento federado de forma pareada (P3 e P4), medir o custo local isoladamente (P6) e analisar os registros para tomar as decisões do protocolo (P5 e P7), sob a coordenação de um orquestrador de experimentos (P1).
+
+\begin{figure*}[t]
+    \centering
+    \begin{tikzpicture}[
+        font=\scriptsize,
+        box/.style={draw, rounded corners=2pt, fill=azul!6, text width=2.2cm, minimum height=1.1cm, align=center},
+        io/.style={draw, rounded corners=2pt, fill=gray!10, text width=2.2cm, minimum height=1.1cm, align=center},
+        todo/.style={draw, dashed, rounded corners=2pt, text width=2.2cm, minimum height=1.1cm, align=center},
+        arr/.style={-{Stealth[length=4pt]}, thick},
+        lab/.style={font=\tiny, align=center, inner sep=1pt}
+    ]
+        \node[io]  (in)   at (0, 0)       {\textbf{P1 Orquestrador}\\ fatores: algoritmo, $\mu$, partição, $\alpha$, semente $s$};
+        \node[box] (part) at (2.8, 0)     {\textbf{P2 Partições}\\ $K = 100$ clientes; treino e teste local};
+        \node[box] (srv)  at (5.75, 1.05)  {\textbf{P3 Servidor}\\ sorteio pareado; agregação ordenada};
+        \node[box] (cli)  at (5.75, -1.05) {\textbf{P4 Clientes}\\ $E$ épocas de SGD $+\,\tfrac{\mu}{2}\lVert w - w^t\rVert^2$};
+        \node[box] (log)  at (8.7, 0)     {\textbf{P5 Execução}\\ conduz as rodadas; CSV e JSON};
+        \node[box] (ana)  at (11.5, 0)    {\textbf{P7 Análise}\\ $\Delta$ pareado, Wilcoxon, TOST, $R_\tau$, $C_\tau$};
+        \node[io]  (out)  at (14.3, 0)    {\textbf{Saída}\\ mapa $\alpha \times \mu \times$ (acurácia, custo); recomendações};
+        \node[todo] (bench) at (8.7, -2.5) {\textbf{P6 Custo local}\\ CPU de 1 \textit{thread}; 30 repetições};
+        \draw[dashed, rounded corners=3pt, gray] (4.45, -1.85) rectangle (7.05, 1.85);
+        \node[lab, gray] at (5.75, -2.05) {simulação federada (Flower + Ray)};
+        \draw[arr] (in) -- (part);
+        \draw[arr] (part) -- (4.45, 0);
+        \draw[arr] ([xshift=-3mm]srv.south) -- node[lab, left] {$w^t$, $k$} ([xshift=-3mm]cli.north);
+        \draw[arr] ([xshift=3mm]cli.north) -- node[lab, right] {$w_k^{t+1}$, $t_{k,e}$} ([xshift=3mm]srv.south);
+        \draw[arr] (7.05, 0) -- (log);
+        \draw[arr] (log) -- (ana);
+        \draw[arr] (ana) -- (out);
+        \draw[arr] (bench.east) -| node[lab, pos=0.75, right] {$t_e$, memória} (ana.south);
+        \draw[arr] (ana.north) -- ++(0, 1.7) -| node[pos=0.25, above, font=\scriptsize] {decisões com regra prévia ($\mu^*$, ampliação de $T$, bloco G) $\Rightarrow$ blocos confirmatórios com sementes novas} (in.north);
+    \end{tikzpicture}
+    \caption{Visão geral da proposta. Cada execução percorre P1 $\rightarrow$ P2 $\rightarrow$ (P3 $\leftrightarrow$ P4, por $T$ rodadas) $\rightarrow$ P5. A análise (P7) consolida as execuções de um bloco e realimenta o orquestrador com as decisões da fase exploratória. O custo local é medido à parte (P6, em tracejado por ainda não estar implementado). $k$: índice da partição sorteada; $t_{k,e}$: tempo de cada época local.}
+    \label{fig:proposta}
+\end{figure*}
+
+\subsection{Componentes da proposta}
+\label{sec:componentes}
+
+A Tabela~\ref{tab:componentes} descreve cada componente pela função, pelas informações que recebe, pelas operações que realiza e pelo que produz. Cada componente corresponde a um módulo do protótipo (Seção~\ref{desenvolvimento}).
+
+\begin{table*}[t]
+    \centering\small
+    \caption{Componentes da proposta. Entre parênteses, o módulo do protótipo que implementa cada um.}
+    \label{tab:componentes}
+    \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}L{2.6cm}L{3.3cm}L{2.9cm}L{4.6cm}L{3.4cm}@{}}
+        \toprule
+        Componente & Função & Entrada & Operações & Saída \\
+        \midrule
+        P1 Orquestrador (\texttt{grid.py}) & Enumerar as execuções de um bloco e distribuí-las entre máquinas & bloco, dataset, $\mu^*$, fatia de sementes & Produto dos níveis dos fatores; chave única por configuração; pula execuções já gravadas; divide por semente (\texttt{--shard}) & Lista de execuções, uma chamada de \texttt{run.py} por configuração \\
+        P2 Gerador de partições (\texttt{data.py}) & Produzir heterogeneidade controlada e reprodutível & dataset, tipo de partição, $\alpha$, semente, $K$ & Dirichlet sobre rótulos (mínimo de 5 amostras, até \num{100000} sorteios), patológica ($k = 2$) ou de quantidade (rótulos IID); divisão 80/20 de cada cliente & Índices das amostras de cada cliente, idênticos para todos os algoritmos na mesma semente \\
+        P3 Servidor (\texttt{strategies.py}) & Coordenar as rodadas e agregar os modelos & $w^t$, semente, rodada $t$ & Sorteia 10 índices de partição com gerador inicializado por (semente, $t$); envia $w^t$ e o índice; ordena as respostas pelo índice; agrega por FedAvg, FedAvgM ou FedAdam; avalia no teste centralizado & $w^{t+1}$; métricas da rodada \\
+        P4 Cliente (\texttt{client.py}) & Treinar localmente, com ou sem termo proximal & $w^t$, índice $k$, $\mu$, $E$, $\eta$, $B$ & $E$ épocas de SGD; soma $(\mu/2)\lVert w - w^t\rVert^2$ à perda se $\mu > 0$; mede o tempo de cada época & $w_k^{t+1}$, $n_k$, tempos de época \\
+        P5 Execução e registro (\texttt{run.py}) & Conduzir uma execução e torná-la auditável e reaproveitável & uma configuração; métricas por rodada; ambiente & Inicia a simulação com P2, P3 e P4; grava acurácia, perda, tempos, bytes e índices sorteados por rodada; grava argumentos, acurácia local por cliente e máquina (\texttt{env.host}) & \texttt{results/<chave>.csv} e \texttt{.json} \\
+        P6 Medidor de custo (\texttt{microbench.py}, a implementar) & Isolar o custo do termo proximal do restante do sistema & modelo, lote, $\mu$ & 30 repetições de uma época em CPU limitada a 1 \textit{thread}, alternando FedAvg e FedProx & Distribuições de $t_e$ e memória de pico \\
+        P7 Análise e decisão (\texttt{analysis.py}, \texttt{analysis\_bc.py}) & Converter registros em evidência e aplicar as regras do protocolo & registros de um bloco & Métricas da Tabela~\ref{tab:metricas}; $\Delta$ pareado só entre execuções da mesma máquina; IC por \textit{bootstrap}; Wilcoxon com Holm; TOST; $R_\tau$ com censura; $C_\tau$ & Resumos por bloco, $\mu^*$, decisão sobre $T$, classificação de cada célula do mapa \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+Os componentes se relacionam em dois níveis. No nível de uma execução, P1 dispara P5, que gera a partição com P2 e conduz as $T$ rodadas entre P3 e P4; ao final, P5 grava os registros. No nível de um bloco, P7 lê os registros de todas as execuções, forma os pares pela semente e devolve a P1 as decisões que definem os blocos seguintes, como o valor de $\mu^*$. P6 roda fora da simulação e só se encontra com os demais em P7, onde o tempo por época medido em CPU restrita é combinado com o número de rodadas até a acurácia-alvo observado na simulação. Dois componentes concentram as garantias do protocolo: P2 e P3 asseguram que os dois membros de um par veem os mesmos dados na mesma ordem, e P4 assegura que a única diferença entre eles é o termo proximal.
+
+\subsection{Funcionamento da proposta}
+\label{sec:funcionamento}
+
+O Algoritmo~\ref{alg:fedprox} descreve uma execução, como implementada no protótipo. A entrada é uma configuração (algoritmo, $\mu$, partição, $\alpha$, semente $s$) e os parâmetros fixos da Tabela~\ref{tab:fixos}; a saída é o modelo global final e os registros por rodada. O condicional da linha~\ref{lin:prox} é o único ponto de divergência entre FedProx e FedAvg. As linhas~\ref{lin:sorteio} e~\ref{lin:ordena} são as que tornam a execução pareável: o sorteio depende apenas da semente e da rodada, e a agregação, apenas do conjunto de respostas, e não da ordem em que elas chegam.
+
+\begin{algorithm}[ht]
+    \small
+    \caption{Uma execução do protocolo (FedProx; com $\mu = 0$, FedAvg).}
+    \label{alg:fedprox}
+    \KwIn{$K$, $C$, $T$, $E$, $B$, $\eta$, $\mu$, partição, $\alpha$, semente $s$}
+    \KwOut{modelo global $w^T$; registros por rodada e por cliente}
+    fixa semente $s$; gera partições $\{\mathcal{D}_k\}_{k=1}^{K}$ (P2); inicializa $w^0$\;
+    \For{$t = 0, \dots, T-1$}{
+        $S_t \leftarrow$ sorteio de $\lfloor CK \rfloor$ índices com gerador $(s, t)$ (P3)\nllabel{lin:sorteio}\;
+        \ForEach{$k \in S_t$ \textbf{em paralelo} (P4)}{
+            $w \leftarrow w^t$\;
+            \For{$e = 1, \dots, E$}{
+                \ForEach{lote $b \subset \mathcal{D}_k$, ordem dada por $(s, t, k)$}{
+                    $L \leftarrow \ell(w; b)$\;
+                    \If{$\mu > 0$\nllabel{lin:prox}}{
+                        $L \leftarrow L + \frac{\mu}{2}\lVert w - w^t\rVert^2$\;
+                    }
+                    $w \leftarrow w - \eta \nabla_w L$\;
+                }
+                registra tempo da época $t_{k,e}$\;
+            }
+            envia $w_k^{t+1} \leftarrow w$, $n_k$ e $\{t_{k,e}\}$ ao servidor\;
+        }
+        ordena as respostas por $k$\nllabel{lin:ordena}\;
+        $w^{t+1} \leftarrow \sum_{k\in S_t} \frac{n_k}{\sum_{j\in S_t} n_j} w_k^{t+1}$\;
+        avalia $w^{t+1}$ no teste centralizado; grava linha do CSV (P5)\;
+    }
+    avalia $w^T$ nos testes locais dos $K$ clientes; grava JSON (P5)\;
+\end{algorithm}
+
+FedAvgM e FedAdam usam o mesmo cliente do FedAvg ($\mu = 0$) e trocam apenas a linha de agregação por um passo de otimizador no servidor sobre o pseudo-gradiente (Seção~\ref{referencial}). Isso permite comparar, com o mesmo pareamento, correções aplicadas no cliente e no servidor.
+
+No nível do trabalho como um todo, o protocolo encadeia as execuções em seis etapas, cada uma com entrada, processamento, decisão e saída definidos:
+
+\begin{enumerate}[label=\textbf{E\arabic*.}, leftmargin=*, itemsep=1pt]
+    \item \textbf{Validação.} Executa FedProx com $\mu = 0$ e FedAvg na mesma semente. Decisão: o protocolo só prossegue se as duas curvas forem idênticas rodada a rodada, o que valida o pareamento e a implementação do termo proximal. Saída: \textit{pipeline} validado e tempo real por execução.
+    \item \textbf{Exploração (bloco A, sementes 0 a 4).} Cruza FedAvg e os três valores de $\mu$ com os cinco $\alpha$. Decisões, com regras fixadas na Metodologia: $\mu^*$ é o $\mu$ de maior acurácia média, e $T$ é ampliado para 200 se menos da metade das execuções com $\alpha \leq 0{,}1$ atingir $\tau$. Saída: descrição de H2 e parâmetros da fase confirmatória.
+    \item \textbf{Referências (bloco B, sementes 0 a 2).} Executa FedAvgM e FedAdam, com o FedAvg refeito na mesma máquina. Saída: a magnitude dos efeitos de uma correção no servidor, que serve de escala para os $\Delta$ do FedProx.
+    \item \textbf{Confirmação (blocos C e D, sementes 5 a 14).} Compara FedProx com $\mu^*$ e FedAvg nas partições patológica e de quantidade (C) e nos cinco $\alpha$ (D), com dez sementes que não participaram da escolha de $\mu^*$. Saída: testes de H1 e H3.
+    \item \textbf{Custo.} Mede $t_e$ dos dois algoritmos em CPU de 1 \textit{thread} (P6) e o combina com $R_\tau$ em $C_\tau = C \cdot R_\tau \cdot E \cdot \bar{t}_e$. Saída: teste de H4.
+    \item \textbf{Síntese.} Classifica cada célula (tipo, $\alpha$) do mapa pela regra~\eqref{eq:mapa} e repete E2 a E5 no CIFAR-10. Saída: mapa de \textit{trade-off} e recomendações de uso.
+\end{enumerate}
+
+A regra de classificação de uma célula combina o teste de equivalência, o teste de diferença e o custo. Sejam $D^{+}$ e $D^{-}$ os eventos ``$\bar\Delta > 0$ com $p_{\text{Holm}} < 0{,}05$'' e ``$\bar\Delta < 0$ com $p_{\text{Holm}} < 0{,}05$'', em que a correção de Holm é aplicada dentro de cada bloco confirmatório: sobre os cinco $\alpha$ no bloco D e sobre as duas partições no bloco C. Então
+\begin{equation}
+    \text{célula} =
+    \begin{cases}
+        \text{equivalente}, & p_{\text{TOST}} < 0{,}05;\\
+        \text{FedProx compensa}, & D^{+} \text{ e } C_\tau^{\text{Prox}} < C_\tau^{\text{Avg}};\\
+        \text{ganho com custo}, & D^{+} \text{ e } C_\tau^{\text{Prox}} \geq C_\tau^{\text{Avg}};\\
+        \text{FedProx prejudica}, & D^{-};\\
+        \text{inconclusivo}, & \text{caso contrário.}
+    \end{cases}
+    \label{eq:mapa}
+\end{equation}
+A equivalência é verificada primeiro porque uma diferença contida em $\pm\delta$, com $\delta = 1$ p.p., não tem relevância prática, mesmo quando é estatisticamente significativa. Esse caso não é apenas teórico: com o pareamento exato, diferenças sistemáticas de centésimos de ponto percentual se tornam detectáveis (Seção~\ref{sec:blocoC}). A regra foi explicitada nesta etapa, depois da execução do bloco C, e por isso a análise desse bloco reporta também os dois testes separadamente. Para os blocos D e do CIFAR-10, ela vale como regra prévia. Quando há execuções censuradas, $C_\tau$ é comparado só nos pares em que os dois algoritmos atingem $\tau$; se menos da metade dos pares atingir $\tau$, o custo é tratado como indeterminado, e uma célula com $D^{+}$ é reportada como ``ganho, custo indeterminado'', com a fração de pares que atingem o alvo em cada algoritmo.
+
+\subsection{Estratégias, técnicas e métodos utilizados}
+\label{sec:tecnicas}
+
+Cada técnica empregada responde a uma limitação identificada na Seção~\ref{trabalhosrelacionados} ou a uma exigência do pareamento.
+
+\paragraph{Partição de Dirichlet sobre rótulos.} Controla o nível de heterogeneidade por um único parâmetro contínuo, de $\alpha = 0{,}05$, em que cada cliente vê poucas classes, a $\alpha = 100$, praticamente IID \citep{hsu2019fedavgm}. É o eixo do mapa e permite procurar um limiar de heterogeneidade em vez de comparar apenas ``IID'' e ``não-IID'', como faz boa parte dos estudos da Tabela~\ref{tab:comparacao}.
+
+\paragraph{Partições patológica e de quantidade.} Separam os dois tipos de desvio que a Dirichlet mistura: com $\alpha \leq 0{,}1$, o desvio de rótulos vem acompanhado de forte desbalanceamento de tamanho (Tabela~\ref{tab:particoes}). A partição patológica tem só desvio de rótulos, com clientes de tamanho igual, e a de quantidade, só desvio de tamanho, com rótulos IID. Com as duas, o efeito do FedProx pode ser atribuído a um tipo de desvio específico (H3).
+
+\paragraph{FedAvg como caso particular do FedProx.} A escolha de comparar o FedProx com o FedAvg, e não com um conjunto amplo de algoritmos, decorre do aninhamento: com $\mu = 0$, os dois são o mesmo algoritmo. Isso dá um teste de implementação (E1) e faz de $\mu$ um ``botão'' contínuo entre os dois, o que permite separar ``o FedProx não funciona'' de ``$\mu$ mal escolhido'' (H2).
+
+\paragraph{Pareamento por semente com execução determinística.} O sorteio de clientes por índice de partição, o embaralhamento dos lotes com gerador derivado de (semente, rodada, partição), os algoritmos determinísticos do PyTorch e a agregação ordenada tornam cada execução reprodutível bit a bit na mesma máquina. Com isso, a variância da comparação se reduz à variância de $\Delta$ entre sementes, e não à variância de cada algoritmo, o que é decisivo quando os efeitos são de décimos de ponto percentual. Como o resultado não é igual bit a bit entre máquinas diferentes, cada semente roda inteira em uma só máquina, e só se pareiam execuções da mesma máquina.
+
+\paragraph{Separação entre exploração e confirmação.} Escolher $\mu^*$ pela melhor acurácia e testá-lo nas mesmas sementes superestimaria o ganho, que é a crítica feita aqui à prática do NIID-Bench \citep{li2022niidbench}. Por isso, a fase exploratória (sementes 0 a 4) reporta todos os $\mu$ em todos os $\alpha$, e a confirmatória testa $\mu^*$ em dez sementes novas.
+
+\paragraph{Testes pareados não paramétricos e teste de equivalência.} O teste de Wilcoxon pareado \citep{wilcoxon1945} não supõe normalidade, adequado a dez pares. A correção de Holm controla o erro do tipo I sobre os cinco $\alpha$. O TOST \citep{schuirmann1987tost} inverte o ônus da prova: para concluir que dois algoritmos são equivalentes, é preciso rejeitar que a diferença exceda $\delta$. É o que permite afirmar ausência de efeito com sustentação estatística, lacuna (iii) da Seção~\ref{trabalhosrelacionados}. Os intervalos de confiança por \textit{bootstrap} acompanham todos os $\Delta$ e, com o posto médio de cada $\mu$, são as ferramentas da fase exploratória, que não usa testes de hipótese.
+
+\paragraph{Métricas de cauda e de estabilidade.} O \textit{client drift} pode afetar mais a oscilação da curva e os clientes mal atendidos do que a média. Por isso, a acurácia global é acompanhada da instabilidade nas últimas 20 rodadas e do percentil 10 da acurácia local (Tabela~\ref{tab:metricas}).
+
+\paragraph{Custo até o alvo e medição isolada.} Nos estudos analisados, a medida de custo mais comum é a de comunicação, igual por construção entre FedAvg e FedProx, e o único tempo de computação por algoritmo encontrado é o tempo por rodada do NIID-Bench (Seção~\ref{trabalhosrelacionados}). Essa medida mistura o termo proximal com todo o resto do treinamento e não considera quantas rodadas o algoritmo economiza. A proposta mede o tempo por época em CPU de 1 \textit{thread}, sem disputa entre clientes, e o combina com $R_\tau$ em $C_\tau$ (lacuna ii). As execuções que não atingem $\tau$ são tratadas como censuradas, e não como $R_\tau = T$.
+
+\paragraph{Correção no servidor como referência.} FedAvgM \citep{hsu2019fedavgm} e FedAdam \citep{reddi2021adaptive} corrigem o \textit{drift} no servidor, sem custo para o cliente. Incluí-los com o mesmo pareamento responde a uma pergunta prática para a borda: se uma correção que não onera o dispositivo dá resultado igual ou melhor, o FedProx precisa justificar o custo que impõe.
+
+\paragraph{Regras de decisão fixadas antes da execução.} $\mu^*$, a ampliação de $T$ e a eventual reformulação do desenho (bloco G, Seção~\ref{sec:gate}) foram decididos por regras escritas antes de ver os dados correspondentes. Isso limita a liberdade de ajustar a análise ao resultado.
+
+\subsection{Cenário de aplicação}
+\label{sec:aplicacao}
+
+O cenário-alvo é o aprendizado federado \textit{cross-device} na borda: uma população grande de dispositivos com poucos dados cada, dos quais apenas uma fração participa de cada rodada, treinando modelos pequenos para classificação de imagens. A proposta o representa com 100 clientes, 10 por rodada, rodadas síncronas e CNNs de \num{62006} e \num{184586} parâmetros (Tabela~\ref{tab:fixos}), configuração do trabalho original do FedAvg \citep{mcmahan2017fedavg} e de um dos experimentos do NIID-Bench.
+
+\paragraph{Dados.} Fashion-MNIST \citep{xiao2017fashion}, usado para depuração e para a grade completa a baixo custo, e CIFAR-10 \citep{krizhevsky2009cifar}, mais sensível à heterogeneidade (Tabela~\ref{tab:datasets}). O conjunto de treino é distribuído entre os clientes pelas partições de P2; o de teste fica no servidor.
+
+\paragraph{Ambiente de execução e infraestrutura.} Os clientes são virtuais, executados pelo motor de simulação do Flower sobre o Ray, cada um com um núcleo de CPU. Até esta etapa, as simulações do Fashion-MNIST rodaram em duas CPUs de notebook (Intel Core i5-1235U e AMD Ryzen 7 3700U), com cerca de 13 a 14 minutos por execução de 100 rodadas. O CIFAR-10 está previsto para GPUs T4 do Kaggle, e o micro-experimento de custo, para a CPU i5 limitada a 1 \textit{thread}, que faz o papel do dispositivo de borda (Tabela~\ref{tab:ambiente}).
+
+\paragraph{Usuários e fluxo de utilização.} A proposta tem dois usuários. O primeiro é o pesquisador que deseja reproduzir ou estender os experimentos. O fluxo é: executar um bloco com \texttt{grid.py} (por exemplo, \texttt{grid.py --block D --mu-star 0.01 --shard 0/2} em uma máquina e \texttt{--shard 1/2} na outra), que pula o que já foi gravado e divide as sementes entre máquinas; em seguida, consolidar os registros com \texttt{analysis.py} ou \texttt{analysis\_bc.py}, que gravam os resumos em JSON de onde saem as tabelas desta pesquisa. O segundo é quem projeta um sistema federado e precisa escolher o algoritmo. Ele não conhece o $\alpha$ da sua população, mas pode estimar estatísticas observáveis que o protocolo associa a cada nível: o número de classes que somam 90\% das amostras de um cliente ($k_{90}$) e a dispersão dos tamanhos locais (Tabela~\ref{tab:particoes}). Essas estatísticas podem ser obtidas de contagens de rótulos agregadas no servidor, de preferência com agregação segura, já que o histograma de rótulos de um cliente é, por si, uma informação sensível. Com elas, consulta a célula correspondente do mapa e obtém a recomendação (usar FedAvg, adotar o FedProx ou preferir uma correção no servidor).
+
+\paragraph{Condições de operação.} A simulação supõe clientes sempre disponíveis, sem falhas, sem atrasos de rede e sem participantes maliciosos, e todos os clientes executam as $E$ épocas. Clientes lentos (\textit{stragglers}) são uma extensão opcional (cenário C5). As conclusões valem para o regime de taxa de aprendizado ($\eta = 0{,}01$), lote (32) e épocas locais ($E = 2$) adotado.
+
+\subsection{Diferencial e contribuição da proposta}
+\label{sec:diferencial}
+
+A Tabela~\ref{tab:diferencial} relaciona as lacunas e limitações identificadas na Seção~\ref{trabalhosrelacionados} ao elemento da proposta que as trata e à evidência já obtida.
+
+\begin{table*}[t]
+    \centering\small
+    \caption{Lacunas da literatura, resposta da proposta e situação atual.}
+    \label{tab:diferencial}
+    \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+    \begin{tabular}{@{}L{4.4cm}L{6.4cm}L{5.8cm}@{}}
+        \toprule
+        Lacuna ou limitação & Resposta da proposta & Situação \\
+        \midrule
+        (i) Diferença FedProx $-$ FedAvg ao longo de $\alpha$ e $\mu$, de forma conjunta & Grade completa $\alpha \times \mu$ com todos os $\mu$ reportados, e não só o melhor & Bloco A concluído no F-MNIST (Seção~\ref{sec:blocoA}) \\
+        (ii) Custo local comparado à economia de rodadas & $t_e$ isolado em CPU de 1 \textit{thread} combinado com $R_\tau$ em $C_\tau$ & $R_\tau$ medido nos blocos A a C; P6 a implementar \\
+        (iii) Separação entre desvio de rótulos e de quantidade, com poder para afirmar ausência de diferença & Partições patológica e de quantidade; dez sementes novas; TOST com $\delta = 1$ p.p. & Bloco C concluído no F-MNIST: equivalência nos dois tipos (Seção~\ref{sec:blocoC}) \\
+        Seleção de $\mu$ pela melhor acurácia nas mesmas repetições & Escolha de $\mu^*$ na exploração e teste em sementes novas & $\mu^* = 0{,}01$ escolhido; confirmação em curso \\
+        Poucas repetições, sem teste ou sem pareamento & Pareamento exato por semente; Wilcoxon, Holm e IC por \textit{bootstrap} & Pareamento verificado bit a bit (Seção~\ref{sec:fluxo}) \\
+        Poucos clientes (regime \textit{cross-silo}) & 100 clientes com participação parcial ($C = 0{,}1$) & Em uso em todos os blocos \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+Os aspectos novos estão na combinação, e não em cada técnica isoladamente. O NIID-Bench \citep{li2022niidbench} já usa partições de rótulos e de quantidade e mede tempo, mas reporta só o melhor $\mu$, com três repetições e sem isolar o termo proximal. \citet{enang2026optimiser} usam 20 sementes, mas não informam o valor de $\mu$ nas fontes consultadas. \citet{quintana2026mammography} aplicam o Wilcoxon pareado, mas com cinco partes e poucos clientes. A proposta reúne, em um mesmo desenho, a varredura conjunta de $\alpha$ e $\mu$, a separação dos tipos de desvio, o pareamento exato, o teste de equivalência e o custo até o alvo em hardware restrito.
+
+A contribuição é de três naturezas. A primeira, e principal, é empírica: o mapa de \textit{trade-off}, que indica em quais condições o FedProx vale o custo que impõe ao cliente e em quais o FedAvg, ou uma correção no servidor, é suficiente. A segunda é metodológica e já se materializou durante o desenvolvimento: a verificação de que o sorteio padrão do Flower não permite pareamento entre execuções, a agregação em ordem fixa, que elimina a dependência da ordem de chegada das respostas, já que a soma em ponto flutuante não é associativa, e a constatação de que execuções idênticas em máquinas diferentes divergem em até 0,13~p.p., valor da mesma ordem das diferenças entre FedProx e FedAvg relatadas pelo NIID-Bench com $\mathrm{Dir}(0{,}5)$, de $-0{,}3$ a $+0{,}5$~p.p. Comparações entre algoritmos que não controlam esses fatores podem atribuir ao algoritmo diferenças que vêm da implementação. A terceira é o artefato: código, registros por rodada e scripts de análise abertos (\linkProjeto), que permitem reproduzir qualquer número deste artigo.
+
+A relevância vem da direção que os primeiros resultados indicam. Se, como sugerem os blocos A e C, o FedProx com $\mu$ pequeno é equivalente ao FedAvg na maior parte das condições, e uma correção no servidor produz efeitos uma ordem de grandeza maiores (bloco B, Seção~\ref{sec:blocoB}), a recomendação prática para dispositivos de borda muda: o custo da correção deve ficar no servidor. Essa conclusão ainda depende dos blocos D e do CIFAR-10, e é para sustentá-la ou refutá-la que o protocolo foi desenhado.
