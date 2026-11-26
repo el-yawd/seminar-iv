@@ -14,7 +14,7 @@ o andamento, no de Desenvolvimento (`elemtextuais/5-Desenvolvimento.tex`).
 | A (F-MNIST) | (FedAvg + μ ∈ {0,01; 0,1; 1}) × 5 α × sementes 0–4 | 100 | concluído | `vostro-15-3515` |
 | B (F-MNIST) | FedAvgM, FedAdam × 5 α × sementes 0–2 (SCAFFOLD não integrado) | 30 + 15 FedAvg | concluído e analisado (`analysis_bc.py`) | i5-1235U (`melchior`), em `results/blocoB/` |
 | C (F-MNIST) | (FedAvg, FedProx μ*) × patológica/quantidade × sementes 5–14 | 40 | concluído e analisado (`analysis_bc.py`): equivalência nos dois tipos | `vostro-15-3515` |
-| D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | concluído em 26/11 (análise pendente) | `vostro-15-3515` |
+| D (F-MNIST) | (FedAvg, FedProx μ*) × 5 α × sementes 5–14 | 100 | concluído e analisado (26/11) | `vostro-15-3515` |
 | A–D (CIFAR-10) | os mesmos blocos com `--dataset cifar10` | 270 | a executar | Kaggle (T4) |
 | microbench | custo do termo proximal, CPU de 1 *thread*, 30 repetições (H4) | — | `microbench.py` ainda não existe | i5-1235U |
 
@@ -108,6 +108,8 @@ por cliente, ambiente). A chave tem a forma
 ```bash
 ../.venv/bin/python analysis.py                      # bloco A do F-MNIST → results/blocoA_resumo.json
 ../.venv/bin/python analysis.py --dataset cifar10 --name blocoA_cifar10
+../.venv/bin/python analysis_bc.py                   # blocos B e C → results/blocoB_resumo.json, blocoC_resumo.json
+../.venv/bin/python analysis_d.py                    # bloco D (H1) → results/blocoD_resumo.json
 ```
 
 O `analysis.py` calcula as métricas da Metodologia (acurácia das últimas 5 rodadas,
@@ -115,8 +117,9 @@ instabilidade, P10 e DP locais, R_τ com censura), as diferenças pareadas com I
 o μ*, a avaliação descritiva de H2 e a regra de ampliar T. A opção `--results` lê outra pasta
 (por exemplo, `results/blocoB`). O `analysis_bc.py` analisa os blocos B
 (descritivo, contra o FedAvg da mesma máquina em `results/blocoB`) e C (Wilcoxon pareado e TOST com
-δ = 1 p.p.) e grava `results/blocoB_resumo.json` e `results/blocoC_resumo.json`. **Falta implementar:**
-o bloco D (Wilcoxon com Holm sobre os 5 α, TOST) e as figuras.
+δ = 1 p.p.) e grava `results/blocoB_resumo.json` e `results/blocoC_resumo.json`. O `analysis_d.py`
+analisa o bloco D (H1: Wilcoxon com Holm sobre os 5 α, TOST com δ = 1 p.p. e classificação de cada α
+pela regra `eq:mapa` da Proposta) e grava `results/blocoD_resumo.json`. **Falta implementar:** as figuras.
 
 Os demais scripts: `gate.py` (avaliação do bloco G), `analysis_piloto.py` e `fill_tables.py`
 (piloto), `partition_stats.py` e `min_size_check.py` (verificação das partições).

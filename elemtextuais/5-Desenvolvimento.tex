@@ -1,7 +1,7 @@
 \section{Desenvolvimento Inicial da Pesquisa}
 \label{desenvolvimento}
 
-Esta seção registra o que já foi executado do protocolo proposto na Seção~\ref{proposta}, conforme o planejamento da Seção~\ref{metodologia}: a implementação do protótipo, a geração e a verificação das partições não-IID, o piloto e o teste de sanidade, o bloco de verificação do trabalho local (G) e, no Fashion-MNIST, os blocos A, B e C, que somam 185 execuções de 100 rodadas. Também descreve as dificuldades encontradas e os ajustes feitos no plano original. Os resultados são parciais: H2 foi avaliada de forma descritiva no bloco A, e H3 foi testada no bloco C, que é a primeira análise confirmatória do trabalho, mas apenas para o Fashion-MNIST. H1 depende do bloco D, cujas 100 execuções terminaram em 26 de novembro e ainda não foram analisadas, e H4, do micro-experimento de custo. O código, os registros por rodada e os scripts que geram as tabelas e figuras desta seção estão no repositório do projeto (\linkProjeto), no diretório \texttt{experimentos/}.
+Esta seção registra o que já foi executado do protocolo proposto na Seção~\ref{proposta}, conforme o planejamento da Seção~\ref{metodologia}: a implementação do protótipo, a geração e a verificação das partições não-IID, o piloto e o teste de sanidade, o bloco de verificação do trabalho local (G) e, no Fashion-MNIST, os blocos A, B, C e D, que somam 285 execuções de 100 rodadas. Também descreve as dificuldades encontradas e os ajustes feitos no plano original. Os resultados são parciais: H2 foi avaliada de forma descritiva no bloco A, e H3 e H1 foram testadas nos blocos C e D, que formam a fase confirmatória, mas apenas para o Fashion-MNIST. H4 depende do micro-experimento de custo. O código, os registros por rodada e os scripts que geram as tabelas e figuras desta seção estão no repositório do projeto (\linkProjeto), no diretório \texttt{experimentos/}.
 
 \subsection{Implementação realizada}
 
@@ -36,7 +36,7 @@ O protótipo é um conjunto de módulos Python com responsabilidades separadas (
         \draw[arr] (bench) -- (ana);
         \draw[arr] (csv) -- (ana);
     \end{tikzpicture}
-    \caption{Módulos do protótipo. Em cinza, pontos de entrada e saídas; em azul, módulos de biblioteca; em tracejado, o módulo ainda não implementado (etapa de custo). A análise é feita por \texttt{analysis.py} (bloco A) e \texttt{analysis\_bc.py} (blocos B e C); as figuras e os testes do bloco D ainda serão acrescentados.}
+    \caption{Módulos do protótipo. Em cinza, pontos de entrada e saídas; em azul, módulos de biblioteca; em tracejado, o módulo ainda não implementado (etapa de custo). A análise é feita por \texttt{analysis.py} (bloco A) e \texttt{analysis\_bc.py} (blocos B e C) e \texttt{analysis\_d.py} (bloco D); as figuras ainda serão acrescentadas.}
     \label{fig:arquitetura}
 \end{figure}
 
@@ -124,7 +124,7 @@ Um segundo detalhe afeta a reprodutibilidade bit a bit. O Flower agrega os resul
 \subsection{Cenários experimentais e partições geradas}
 \label{sec:cenarios}
 
-A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que ele responde. C1 e C2 formam o núcleo do trabalho, C3 isola o tipo de heterogeneidade, C4 mede o custo e C5 é uma extensão condicionada ao tempo disponível. As partições de C1 e C3 foram geradas e verificadas. No Fashion-MNIST, C1 e C2 foram cobertos pelo bloco A, e C3, pelo bloco C.
+A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que ele responde. C1 e C2 formam o núcleo do trabalho, C3 isola o tipo de heterogeneidade, C4 mede o custo e C5 é uma extensão condicionada ao tempo disponível. As partições de C1 e C3 foram geradas e verificadas. No Fashion-MNIST, C1 e C2 foram cobertos pelo bloco A, C1 também pelo bloco D, e C3, pelo bloco C.
 
 \begin{table*}[t]
     \centering\small
@@ -134,7 +134,7 @@ A Tabela~\ref{tab:cenarios} relaciona cada cenário planejado à questão que el
         \toprule
         ID & Cenário & Descrição e relevância & Hipóteses & Situação \\
         \midrule
-        C1 & Varredura de nível ($\alpha$) & Dirichlet de rótulos com $\alpha$ de 0,05 (cada cliente vê poucas classes) a 100 (praticamente IID). Localiza o limiar a partir do qual o FedProx passa a compensar. & H1 & bloco A concluído (F-MNIST; Seção~\ref{sec:blocoA}); bloco D executado \\
+        C1 & Varredura de nível ($\alpha$) & Dirichlet de rótulos com $\alpha$ de 0,05 (cada cliente vê poucas classes) a 100 (praticamente IID). Localiza o limiar a partir do qual o FedProx passa a compensar. & H1 & blocos A e D concluídos (F-MNIST; Seções~\ref{sec:blocoA} e~\ref{sec:blocoD}) \\
         C2 & Sensibilidade a $\mu$ & Cruza os três valores de $\mu$ com todos os $\alpha$. Separa ``o FedProx não funciona'' de ``$\mu$ mal escolhido''. & H2 & bloco A concluído (F-MNIST); $\mu^* = 0{,}01$ \\
         C3 & Tipo de heterogeneidade & Partição patológica ($k = 2$ classes) e desvio só de quantidade, com rótulos IID. & H3 & bloco C concluído (F-MNIST; Seção~\ref{sec:blocoC}) \\
         C4 & Custo local em CPU restrita & Tempo por época e memória de pico de FedAvg e FedProx em 1 thread de CPU. & H4 & a executar \\
@@ -370,11 +370,54 @@ O bloco C compara o FedAvg e o FedProx com $\mu^* = 0{,}01$ nas partições pato
 
 \paragraph{H3 sob desvio de quantidade.} A previsão de equivalência se confirmou ($p_{\text{TOST}} = 0{,}001$). Há, porém, um detalhe instrutivo: a diferença é também estatisticamente significativa ($p_W = 0{,}004$ após a correção de Holm), porque o FedProx ficou abaixo do FedAvg em todas as dez sementes. A magnitude é de $-0{,}03$~p.p., cerca de três amostras do conjunto de teste de \num{10000}. O pareamento exato torna detectáveis diferenças sistemáticas desse tamanho, sem relevância prática. É esse caso que motivou explicitar, na regra~\eqref{eq:mapa}, a precedência da equivalência sobre a diferença; pela regra, a célula é classificada como equivalente. As conclusões sobre H3 não dependem dessa regra, definida depois do bloco: H3 previa equivalência sob desvio de quantidade, o que o TOST confirma, e a previsão de superioridade na partição patológica falha com qualquer dos dois testes.
 
-\paragraph{O tipo de desvio e o FedAvg.} Além do teste de H3, o bloco mostra o efeito de cada tipo de desvio sobre o próprio FedAvg. A partição patológica levou a acurácia a 72,3\% e o percentil 10 a 47,0\%, valores entre os de $\alpha = 0{,}05$ e $\alpha = 0{,}1$ no bloco A, mas com instabilidade menor (2,8~p.p., contra 5,6 e 3,1~p.p.), possivelmente porque, com clientes de tamanho igual, nenhuma rodada é dominada por um cliente muito maior que os demais. O desvio só de quantidade, ao contrário, não prejudicou o FedAvg: 86,6\%, acima dos 84,7\% obtidos com Dirichlet $\alpha = 100$ no bloco A (com outras sementes, o que torna a comparação apenas indicativa). Uma explicação plausível é que, com rótulos IID, os clientes grandes dão muito mais passos locais e recebem mais peso na agregação, sem puxar o modelo para uma distribuição enviesada. O resultado é coerente com a observação do NIID-Bench de que o desvio de quantidade pouco afeta o FedAvg em classificação \citep{li2022niidbench} e indica que, na partição de Dirichlet, a degradação com $\alpha$ pequeno vem do desvio de rótulos, e não do desbalanceamento de tamanho que o acompanha (Tabela~\ref{tab:particoes}).
+\paragraph{O tipo de desvio e o FedAvg.} Além do teste de H3, o bloco mostra o efeito de cada tipo de desvio sobre o próprio FedAvg. A partição patológica levou a acurácia a 72,3\% e o percentil 10 a 47,0\%, valores entre os de $\alpha = 0{,}05$ e $\alpha = 0{,}1$ no bloco A, mas com instabilidade menor (2,8~p.p., contra 5,6 e 3,1~p.p.), possivelmente porque, com clientes de tamanho igual, nenhuma rodada é dominada por um cliente muito maior que os demais. O desvio só de quantidade, ao contrário, não prejudicou o FedAvg: 86,6\%, acima dos 84,7\% obtidos com Dirichlet $\alpha = 100$ no bloco A (com outras sementes; a comparação com as mesmas sementes, no bloco D, está na Seção~\ref{sec:blocoD} e confirma a diferença). Uma explicação plausível é que, com rótulos IID, os clientes grandes dão muito mais passos locais e recebem mais peso na agregação, sem puxar o modelo para uma distribuição enviesada. O resultado é coerente com a observação do NIID-Bench de que o desvio de quantidade pouco afeta o FedAvg em classificação \citep{li2022niidbench} e indica que, na partição de Dirichlet, a degradação com $\alpha$ pequeno vem do desvio de rótulos, e não do desbalanceamento de tamanho que o acompanha (Tabela~\ref{tab:particoes}).
 
 \paragraph{Convergência.} Na partição patológica, só 5 das 10 execuções de cada algoritmo atingiram $\tau = 76{,}2\%$ em 100 rodadas, sempre as mesmas sementes nos dois algoritmos e na mesma rodada média (93,2). A regra de ampliar $T$ foi definida para $\alpha \leq 0{,}1$ e não se aplica a este bloco; $T = 100$ foi mantido, e $R_\tau$ é comparado só nos cinco pares não censurados. Sob desvio de quantidade, todas atingiram $\tau$, em 15,6 rodadas em média, também iguais nos dois algoritmos.
 
 \paragraph{Discussão.} O bloco C confirma, agora com sementes que não participaram da escolha de $\mu^*$, o padrão do bloco A: com $\mu = 0{,}01$, o termo proximal não altera o treinamento de forma relevante, em nenhum tipo de heterogeneidade: o maior efeito, sob desvio de quantidade, é estatisticamente detectável, mas de $-0{,}03$~p.p. Isso responde à parte de QP1 sobre o tipo de heterogeneidade para o valor de $\mu$ escolhido pelo protocolo, mas também delimita o alcance da resposta. Como $\mu^*$ é pequeno, H1 e H3 testam um FedProx muito próximo do FedAvg, e um efeito com $\mu = 1$, que no bloco A reduziu a acurácia em 0,6 a 0,9~p.p.\ para $\alpha \geq 0{,}1$, fica fora da fase confirmatória. A escolha de $\mu^*$ foi feita pela regra fixada antes dos dados e não será revista; o que muda é a interpretação: a conclusão será sobre o FedProx ``com $\mu$ escolhido pela acurácia'', que é o mesmo critério de escolha usado pelo NIID-Bench \citep{li2022niidbench}.
+
+\subsection{Bloco D: nível de heterogeneidade (H1)}
+\label{sec:blocoD}
+
+O bloco D compara o FedAvg e o FedProx com $\mu^* = 0{,}01$ nos cinco valores de $\alpha$ da partição de Dirichlet, com as sementes confirmatórias 5 a 14 (100 execuções, 12,4~min em média, todas na mesma máquina). Quatro execuções foram encerradas pelo Ray por falta de memória e refeitas (Tabela~\ref{tab:ajustes}); como uma execução interrompida não grava resultado, as 100 analisadas estão completas. A análise é feita por \texttt{experimentos/analysis\_d.py}, com os mesmos procedimentos do bloco C (Seção~\ref{sec:blocoC}): Wilcoxon pareado bilateral, agora com correção de Holm sobre os cinco $\alpha$, TOST com $\delta = 1$~p.p.\ e $\Delta$ arredondados a 4 casas decimais (Tabela~\ref{tab:blocoD}). Pela Tabela~\ref{tab:hipoteses}, H1 é aceita se houver $\Delta > 0$ significativo para $\alpha \leq 0{,}1$ e equivalência para $\alpha \geq 1$.
+
+\begin{table}[ht]
+    \centering\small
+    \caption{Bloco D (Fashion-MNIST, sementes 5 a 14, $\mu^* = 0{,}01$). Acc.: média $\pm$ desvio padrão das dez sementes (\%); $\bar\Delta$: FedProx $-$ FedAvg na mesma semente (p.p.), com IC 95\% por \textit{bootstrap}; $p_H$: Wilcoxon bilateral com correção de Holm sobre os cinco $\alpha$; $p_T$: TOST ($\delta = 1$~p.p.).}
+    \label{tab:blocoD}
+    \setlength{\tabcolsep}{2.5pt}
+    \begin{tabular}{@{}cccc@{}}
+        \toprule
+        & \multicolumn{2}{c}{Acc.} & \\
+        \cmidrule(lr){2-3}
+        $\alpha$ & FedAvg & FedProx & $\bar\Delta$ [IC 95\%] \\
+        \midrule
+        0,05 & 70{,}07 $\pm$ 2{,}98 & 70{,}10 $\pm$ 2{,}96 & $+0{,}025$ [$-0{,}015$; $+0{,}057$] \\
+        0,1  & 73{,}00 $\pm$ 2{,}36 & 72{,}99 $\pm$ 2{,}36 & $-0{,}005$ [$-0{,}032$; $+0{,}018$] \\
+        0,5  & 81{,}31 $\pm$ 0{,}94 & 81{,}31 $\pm$ 0{,}94 & $-0{,}000$ [$-0{,}014$; $+0{,}016$] \\
+        1    & 83{,}15 $\pm$ 0{,}53 & 83{,}14 $\pm$ 0{,}53 & $-0{,}008$ [$-0{,}023$; $+0{,}007$] \\
+        100  & 84{,}34 $\pm$ 0{,}34 & 84{,}33 $\pm$ 0{,}34 & $-0{,}014$ [$-0{,}026$; $-0{,}003$] \\
+        \midrule
+        $\alpha$ & $p_H$ & $p_T$ & $\bar\Delta$P10 [IC 95\%] \\
+        \midrule
+        0,05 & 0{,}93 & 0{,}001 & $+0{,}60$ [$+0{,}10$; $+1{,}20$] \\
+        0,1  & 1{,}00 & 0{,}001 & $-0{,}15$ [$-0{,}32$; $0{,}00$] \\
+        0,5  & 1{,}00 & 0{,}001 & $+0{,}09$ [$-0{,}04$; $+0{,}27$] \\
+        1    & 0{,}93 & 0{,}001 & $-0{,}11$ [$-0{,}56$; $+0{,}20$] \\
+        100  & 0{,}40 & 0{,}001 & $-0{,}16$ [$-0{,}34$; $+0{,}01$] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{H1 com heterogeneidade forte.} A previsão era que o FedProx superasse o FedAvg com $\alpha \leq 0{,}1$. Não superou. Com $\alpha = 0{,}05$, a diferença média foi de $+0{,}025$~p.p., o FedProx venceu em 7 das 10 sementes e o maior $|\Delta|$ foi de 0,11~p.p., sem significância ($p_H = 0{,}93$). Com $\alpha = 0{,}1$, a diferença foi de $-0{,}005$~p.p., com 5 vitórias, 1 empate e 4 derrotas ($p_H = 1{,}00$). Nos dois níveis, o TOST concluiu pela equivalência com $p = 0{,}001$, o menor valor possível com dez pares. Essa parte de H1 é, portanto, rejeitada no Fashion-MNIST.
+
+\paragraph{H1 com heterogeneidade fraca.} A previsão de equivalência para $\alpha \geq 1$ se confirmou ($p_T = 0{,}001$ com $\alpha = 1$ e $\alpha = 100$), e o mesmo vale para $\alpha = 0{,}5$. Com $\alpha = 100$, o FedProx ficou abaixo do FedAvg em 6 das 10 sementes, com $\bar\Delta = -0{,}014$~p.p.\ e IC por \textit{bootstrap} inteiramente abaixo de zero, mas, diferentemente do desvio de quantidade no bloco C, a diferença não é significativa pelo Wilcoxon ($p = 0{,}08$ sem correção e $0{,}40$ com Holm). Pela regra~\eqref{eq:mapa}, as cinco células do bloco são classificadas como equivalentes. H1 não é aceita como um todo: a parte de equivalência se confirma, e a de superioridade com heterogeneidade forte falha.
+
+\paragraph{Métricas secundárias.} A instabilidade nas últimas 20 rodadas mudou no máximo 0,02~p.p.\ em média. A fração de execuções que atinge $\tau = 76{,}2\%$ foi a mesma nos dois algoritmos em todos os $\alpha$ (6 de 10 com $\alpha = 0{,}05$ e 10 de 10 nos demais), e a rodada média de chegada nos pares não censurados diferiu no máximo 0,8 rodada ($\alpha = 1$: 29,6 contra 30,4). O único efeito com intervalo fora de zero a favor do FedProx foi no percentil 10 com $\alpha = 0{,}05$: $+0{,}60$~p.p., IC 95\% de $+0{,}10$ a $+1{,}20$. O resultado deve ser lido com cautela: o P10 não é a métrica de H1, o intervalo não tem correção para as várias métricas e $\alpha$, e, no bloco A, o mesmo $\mu$ nesse $\alpha$ teve efeito nulo sobre o P10 (Tabela~\ref{tab:blocoA}). Como nenhuma célula tem ganho significativo em acurácia, o custo $C_\tau$ não altera a classificação de nenhuma delas, e o micro-experimento de custo continua necessário para a parte de H4 sobre o tempo por época.
+
+\paragraph{O nível de heterogeneidade e o FedAvg.} Com as sementes confirmatórias, o efeito de $\alpha$ sobre o FedAvg reproduz o do bloco A. De $\alpha = 100$ para $\alpha = 0{,}05$, a acurácia caiu de 84,3\% para 70,1\% (no bloco A, de 84,7\% para 68,9\%), o percentil 10 caiu de 81,1\% para 33,6\%, e a instabilidade subiu de 0,56 para 5,25~p.p. Como os blocos C e D usam as mesmas sementes, a comparação entre tipos de desvio prevista para H3 pode ser feita diretamente. A partição patológica levou o FedAvg a 72,3\%, entre os 70,1\% de $\alpha = 0{,}05$ e os 73,0\% de $\alpha = 0{,}1$, mas com percentil 10 maior (47,0\%, contra 33,6\% e 42,8\%) e instabilidade menor (2,8~p.p., contra 5,3 e 4,0~p.p.). O desvio só de quantidade (86,6\%) ficou acima até de $\alpha = 100$ (84,3\%). Quanto ao FedProx, o efeito na partição patológica ($+0{,}000$~p.p.) não foi maior que nos $\alpha$ pequenos da Dirichlet ($+0{,}025$ e $-0{,}005$~p.p.): o tipo de heterogeneidade não muda a conclusão.
+
+\paragraph{Discussão.} Com o bloco D, a fase confirmatória do Fashion-MNIST está completa. Nas sete células do mapa (cinco $\alpha$ e duas partições), o FedProx com $\mu^* = 0{,}01$ é equivalente ao FedAvg com margem de 1~p.p., e o maior $|\bar\Delta|$ entre elas foi de 0,03~p.p. Para comparação, o FedAdam, uma correção no servidor, melhorou a acurácia em 1,5 a 5,2~p.p.\ no bloco B. Como já observado no bloco C, a conclusão vale para o FedProx com $\mu$ escolhido pela acurácia na fase exploratória: o $\mu^*$ escolhido é pequeno, e o termo proximal quase não age sobre o treinamento nesse regime de poucos passos locais (Seção~\ref{sec:gate}). Resta saber se o CIFAR-10, com um modelo maior e mais sensível ao \textit{drift} dos clientes, leva a um $\mu^*$ maior e a um mapa diferente.
 
 \subsection{Tempo de execução e orçamento}
 
@@ -417,7 +460,7 @@ A Tabela~\ref{tab:ajustes} reúne as diferenças entre o que foi planejado na Se
 
 \subsection{Situação em relação ao cronograma}
 
-Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores. O OE2 foi atingido com o protótipo, o teste de sanidade e os algoritmos de referência do bloco B, exceto o SCAFFOLD. O OE3 foi atendido para o Fashion-MNIST, e as partições do CIFAR-10 são geradas automaticamente a partir da semente. O OE4 está em andamento: no Fashion-MNIST, a grade exploratória (bloco A), as referências (bloco B) e a confirmação por tipo de heterogeneidade (bloco C) estão concluídas, e a confirmação por nível (bloco D) foi executada e aguarda a análise. O OE5 cobre todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita, e o OE6 foi iniciado com a análise confirmatória do bloco C. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. O atraso em relação ao planejado vem principalmente de as simulações terem rodado em CPU, com cerca de 14~min por execução, contra cerca de 1~min estimado para a GPU, e foi absorvido pela divisão dos blocos entre duas máquinas. A principal pendência continua sendo medir o tempo por execução na T4, de que depende o CIFAR-10.
+Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anteriores. O OE2 foi atingido com o protótipo, o teste de sanidade e os algoritmos de referência do bloco B, exceto o SCAFFOLD. O OE3 foi atendido para o Fashion-MNIST, e as partições do CIFAR-10 são geradas automaticamente a partir da semente. O OE4 está em andamento: no Fashion-MNIST, a grade exploratória (bloco A), as referências (bloco B) e a confirmação por tipo de heterogeneidade (bloco C) e a confirmação por nível (bloco D) estão concluídas. O OE5 cobre todas as métricas da Tabela~\ref{tab:metricas}, exceto a memória de pico e o custo em CPU restrita, e o OE6 foi iniciado com a análise confirmatória dos blocos C e D. A Tabela~\ref{tab:status} compara o cronograma planejado com a situação atual. O atraso em relação ao planejado vem principalmente de as simulações terem rodado em CPU, com cerca de 14~min por execução, contra cerca de 1~min estimado para a GPU, e foi absorvido pela divisão dos blocos entre duas máquinas. A principal pendência continua sendo medir o tempo por execução na T4, de que depende o CIFAR-10.
 
 \begin{table}[ht]
     \centering\small
@@ -433,7 +476,7 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
         Reprodutibilidade em segunda máquina & -- & concluído \\
         Blocos A e B + escolha de $\mu^*$ & 18--24 nov. & concluídos com atraso (F-MNIST); $\mu^* = 0{,}01$; B sem SCAFFOLD \\
         Formalização da proposta & -- & concluído (Seção~\ref{proposta}) \\
-        Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & C concluído e analisado (F-MNIST); D concluído, análise pendente \\
+        Blocos C e D (10 sementes novas) & 25 nov.--1 dez. & concluídos e analisados (F-MNIST) \\
         Micro-experimento de custo em CPU & 25 nov.--8 dez. & a executar \\
         Análise estatística e figuras & 2--8 dez. & a executar \\
         Resultados, conclusões e entrega & 2--15 dez. & a executar \\
@@ -441,4 +484,4 @@ Em relação aos objetivos específicos, o OE1 foi concluído nas etapas anterio
     \end{tabular}
 \end{table}
 
-Os próximos passos são, nesta ordem: (i) testar H1 no bloco D do Fashion-MNIST, já executado, com Wilcoxon, correção de Holm e TOST; (ii) medir o tempo por execução na T4 (\texttt{experimentos/kaggle.ipynb}), executar o bloco A no CIFAR-10 e escolher o $\mu^*$ desse dataset; (iii) implementar \texttt{microbench.py} e executar o micro-experimento de custo (H4); (iv) gerar as figuras (curvas por $\alpha$ e mapa $\alpha \times \mu$) e montar o mapa de \textit{trade-off} pela regra~\eqref{eq:mapa}; e (v) integrar o SCAFFOLD ao bloco B, se couber no prazo.
+Os próximos passos são, nesta ordem: (i) medir o tempo por execução na T4 (\texttt{experimentos/kaggle.ipynb}), executar o bloco A no CIFAR-10 e escolher o $\mu^*$ desse dataset; (ii) implementar \texttt{microbench.py} e executar o micro-experimento de custo (H4); (iii) gerar as figuras (curvas por $\alpha$ e mapa $\alpha \times \mu$) e montar o mapa de \textit{trade-off} pela regra~\eqref{eq:mapa}; e (iv) integrar o SCAFFOLD ao bloco B, se couber no prazo.

@@ -354,3 +354,28 @@ por volta da meia-noite de 23→24/11, se a máquina continuar ligada.
 - Artigo atualizado: resumo da seção, C1, tempo do bloco D, linha "Memória no bloco D" dos
   ajustes (quatro falhas; bloco completo), OE4, `tab:status` (26/11; "D concluído, análise
   pendente") e próximos passos. Compila com 29 páginas, sem *overfull*. README: D concluído.
+
+## 26/11 (tarde) — teste de H1 no bloco D
+
+- A pedido do usuário, novo `experimentos/analysis_d.py`, que reaproveita as funções do
+  `analysis_bc.py` do Diego (mesmo Wilcoxon, TOST, IC e arredondamento dos Δ a 4 casas),
+  com Holm sobre os 5 α e a classificação de cada α pela regra `eq:mapa` da Proposta. Grava
+  `results/blocoD_resumo.json`.
+- **H1 não é aceita no F-MNIST.** Nenhum α tem Δ significativo (p de Holm entre 0,40 e
+  1,00), e os cinco são equivalentes ao FedAvg pelo TOST (p = 0,001, o mínimo com 10 pares).
+  A parte de equivalência para α ≥ 1 se confirma; a de superioridade para α ≤ 0,1 falha
+  (α = 0,05: Δ = +0,025 p.p., 7/10 vitórias; α = 0,1: Δ = −0,005 p.p.). Pela regra do
+  mapa, as cinco células são "equivalente".
+- Detalhes: com α = 100, o IC por *bootstrap* de Δ fica abaixo de zero
+  ([−0,026; −0,003]), mas o Wilcoxon não é significativo (p = 0,08 sem correção). O único
+  efeito secundário fora de zero a favor do FedProx é o P10 com α = 0,05 (+0,60 p.p.,
+  IC [+0,10; +1,20]), sem correção para múltiplas métricas e não visto no bloco A; foi
+  reportado como exploratório. R_τ e a fração que atinge τ são praticamente iguais.
+- Na prévia do registro anterior, a acurácia do FedProx com α = 0,05 aparece como 70,09 %;
+  o valor é 70,095 %, arredondado para 70,10 % na tabela do artigo.
+- Artigo: nova subseção "Bloco D: nível de heterogeneidade (H1)" (`sec:blocoD`,
+  `tab:blocoD`), com a comparação entre tipos de desvio com as mesmas sementes prevista para
+  H3; atualizados o resumo (285 execuções; equivalência nos 5 α), a abertura da seção, C1,
+  a legenda da figura dos módulos, o parágrafo do bloco C sobre o desvio de quantidade
+  (agora remete ao D), OE4/OE6, `tab:status` e os próximos passos (o teste de H1 saiu da
+  lista). Compila com 29 páginas, sem *overfull*.
